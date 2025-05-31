@@ -1,15 +1,48 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { FaHome, FaSearch, FaUser, FaShieldAlt, FaSignOutAlt, FaSun, FaMoon } from 'react-icons/fa';
-import '../index.css'
+import '../index.css';
+import { jwtDecode } from 'jwt-decode';
 
 function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Placeholder for authentication state (replace with actual auth logic)
-  const isAuthenticated = true;
+  // Check authentication status and admin status
+  const token = localStorage.getItem('token');
+  const isAuthenticated = !!token;
+  let isAdmin = false;
+
+  if (isAuthenticated) {
+    try {
+      const decoded = jwtDecode(token);
+      isAdmin = decoded.isAdmin || false;
+    } catch (err) {
+      localStorage.removeItem('token');
+    }
+  }
+
+  // Logout function
+  const handleLogout = async () => {
+    if (confirm("Are you sure want to log out ?")) {
+      try {
+
+        await fetch('http://localhost:3000/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      } catch (err) {
+        console.error('Logout error:', err);
+      }
+      // Clear token and redirect
+      localStorage.removeItem('token');
+      navigate('/');
+    }
+  };
 
   // Hide the navbar on the Enter page ("/")
   if (location.pathname === '/') {
@@ -47,18 +80,17 @@ function Navbar() {
               <span className="hidden md:inline">Profile</span>
             </Link>
 
-            {/* Admin Link */}
-            <Link to="/admin" className="flex items-center space-x-1 text-theme hover:text-gray-500 transition-all duration-300 transform hover:scale-110">
-              <FaShieldAlt className="text-lg" />
-              <span className="hidden md:inline">Admin</span>
-            </Link>
+            {/* Admin Link (only for admins) */}
+            {isAdmin && (
+              <Link to="/admin" className="flex items-center space-x-1 text-theme hover:text-gray-500 transition-all duration-300 transform hover:scale-110">
+                <FaShieldAlt className="text-lg" />
+                <span className="hidden md:inline">Admin</span>
+              </Link>
+            )}
 
             {/* Logout Button */}
             <button
-              onClick={() => {
-                // Placeholder for logout logic
-                navigate('/');
-              }}
+              onClick={handleLogout}
               className="flex items-center space-x-1 text-theme hover:text-red-500 transition-all duration-300 transform hover:scale-110"
             >
               <FaSignOutAlt className="text-lg" />
