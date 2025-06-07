@@ -7,6 +7,10 @@
   --background-red : #f292924d;
   --text-green : #154e1a;
   --background-green : #00800038;
+  --text-yellow : #494e15;
+  --background-yellow : #6f800038;
+  --text-purple : #27154e;
+  --background-purple : #20008038;
   --card-bg: #f0f0f0;
   --border-color: #e5e7eb;
   --hover-bg: #e5e7eb;
@@ -26,7 +30,11 @@
   --background-red: #f2a7a7c2;
   --text-green : #0c992b;
   --background-green: #4cff682b;
-  --card-bg: #1f2937;
+  --text-yellow : #89990c;
+  --background-yellow: #f3ff4c2b;
+  --text-purple : #610c99;
+  --background-purple: #974cff2b;
+  --card-bg: #000000;
   --border-color: #374151;
   --hover-bg: #374151;
   --gradient-from: #3b82f6;
@@ -71,6 +79,16 @@ body {
 .green{
   background-color: var(--background-green);
   color: var(--text-green);
+}
+
+.yellow{
+  background-color: var(--background-yellow);
+  color: var(--text-yellow);
+}
+
+.purple{
+  background-color: var(--background-purple);
+  color: var(--text-purple);
 }
 
 .border-theme {

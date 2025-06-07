@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Post = require('../models/Post');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const router = express.Router();
+const mongoose = require('mongoose');
 
 // Configure multer for avatar uploads
 const storage = multer.diskStorage({
@@ -60,6 +61,7 @@ router.put('/profile', authMiddleware, upload.single('avatar'), async (req, res)
 
     res.json(user);
   } catch (error) {
+    console.error('Error updating profile:', error.stack);
     res.status(500).json({ message: 'Error updating profile', error: error.message });
   }
 });
@@ -67,6 +69,11 @@ router.put('/profile', authMiddleware, upload.single('avatar'), async (req, res)
 // Get user profile by username
 router.get('/:username', authMiddleware, async (req, res) => {
   try {
+    // Validate ObjectId for req.user._id
+    if (!mongoose.isValidObjectId(req.user._id)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
     const user = await User.findOne({ username: req.params.username })
       .select('name username avatar bio');
     if (!user) {
@@ -77,9 +84,13 @@ router.get('/:username', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'User is suspended' });
     }
 
-    // Check if the requester has blocked the user
-    const currentUser = await User.findById(req.user._id);
-    if (currentUser.blockedUsers.includes(user._id)) {
+    // Fetch current user to check blocked users
+    const currentUser = await User.findById(req.user._id).select('blockedUsers savedPosts');
+    if (!currentUser) {
+      return res.status(404).json({ message: 'Current user not found' });
+    }
+
+    if (currentUser.blockedUsers.some(id => id.toString() === user._id.toString())) {
       return res.status(403).json({ message: 'You have blocked this user' });
     }
 
@@ -95,14 +106,14 @@ router.get('/:username', authMiddleware, async (req, res) => {
       user,
       posts: posts.map(post => ({
         ...post.toJSON(),
-        isLiked: post.likes.includes(req.user._id),
-        isSaved: currentUser.savedPosts.includes(post._id),
+        isLiked: post.likes.some(id => id.toString() === req.user._id.toString()),
+        isSaved: currentUser.savedPosts.some(id => id.toString() === post._id.toString()),
         likes: post.likes.length,
         comments: post.comments.length,
-        shares: post.shares.length,
       })),
     });
   } catch (error) {
+    console.error('Error fetching profile:', error.stack);
     res.status(500).json({ message: 'Error fetching profile', error: error.message });
   }
 });
@@ -110,6 +121,10 @@ router.get('/:username', authMiddleware, async (req, res) => {
 // Block user
 router.post('/block/:userId', authMiddleware, async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
     const targetUser = await User.findById(req.params.userId);
     if (!targetUser) {
       return res.status(404).json({ message: 'User not found' });
@@ -125,6 +140,7 @@ router.post('/block/:userId', authMiddleware, async (req, res) => {
 
     res.json({ message: 'User blocked successfully' });
   } catch (error) {
+    console.error('Error blocking user:', error.stack);
     res.status(500).json({ message: 'Error blocking user', error: error.message });
   }
 });

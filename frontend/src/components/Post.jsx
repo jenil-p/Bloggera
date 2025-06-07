@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   HeartIcon,
   ChatBubbleOvalLeftIcon,
-  ShareIcon,
   BookmarkIcon,
   EllipsisHorizontalIcon,
 } from '@heroicons/react/24/outline';
@@ -11,7 +10,7 @@ import { Link } from 'react-router-dom';
 import api from '../utils/api';
 import CommentSection from './CommentSection';
 
-function Post({ post, onLike, onComment, onShare, onSave, onReport, isOwnPost, onDelete, onArchive, onRestrictComments }) {
+function Post({ post, onLike, onComment, onSave, onReport, isOwnPost, onDelete, onArchive, onRestrictComments }) {
   const [isLiked, setIsLiked] = useState(post.isLiked || false);
   const [isSaved, setIsSaved] = useState(post.isSaved || false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -42,13 +41,16 @@ function Post({ post, onLike, onComment, onShare, onSave, onReport, isOwnPost, o
     }
   };
 
-  const handleShare = async () => {
-    try {
-      await api.post(`/posts/${post._id}/share`);
-      onShare(post._id);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error sharing post');
-    }
+  const handleCopyLink = () => {
+    const baseUrl = import.meta.env.VITE_BASE_URL || window.location.origin;
+    const postUrl = `${baseUrl}/post/${post._id}`;
+    navigator.clipboard.writeText(postUrl).then(() => {
+      alert('Link copied to clipboard!');
+    }).catch((err) => {
+      setError('Failed to copy link');
+      console.error('Copy link error:', err);
+    });
+    setShowMenu(false);
   };
 
   const handleReport = async () => {
@@ -125,36 +127,48 @@ function Post({ post, onLike, onComment, onShare, onSave, onReport, isOwnPost, o
                 <div className="py-1">
                   <button
                     onClick={handleDelete}
-                    className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100"
+                    className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-[#33323254]"
                   >
                     Delete
                   </button>
                   <button
                     onClick={handleArchive}
-                    className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-gray-100"
+                    className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#33323254]"
                   >
                     {post.isArchived ? 'Unarchive' : 'Archive'}
                   </button>
                   <button
                     onClick={handleRestrictComments}
-                    className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-gray-100"
+                    className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#33323254]"
                   >
                     {post.restrictComments ? 'Allow Comments' : 'Restrict Comments'}
+                  </button>
+                  <button
+                    onClick={handleCopyLink}
+                    className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#33323254]"
+                  >
+                    Copy Link
                   </button>
                 </div>
               ) : (
                 <div className="py-1">
                   <button
                     onClick={() => setShowReportModal(true)}
-                    className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-gray-100"
+                    className="block w-full text-left px-4 py-2 text-sm text-theme cursor-pointer hover:bg-[#33323254]"
                   >
                     Report
                   </button>
                   <button
                     onClick={handleBlockUser}
-                    className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100"
+                    className="block w-full text-left px-4 py-2 text-sm text-red-500 cursor-pointer hover:bg-[#33323254]"
                   >
                     Block User
+                  </button>
+                  <button
+                    onClick={handleCopyLink}
+                    className="block w-full text-left px-4 py-2 text-sm text-theme cursor-pointer hover:bg-[#33323254]"
+                  >
+                    Copy Link
                   </button>
                 </div>
               )}
@@ -181,10 +195,6 @@ function Post({ post, onLike, onComment, onShare, onSave, onReport, isOwnPost, o
         >
           <ChatBubbleOvalLeftIcon className="h-5 w-5" />
           <span>{post.comments}</span>
-        </button>
-        <button onClick={handleShare} className="flex items-center space-x-1 hover:text-green-500">
-          <ShareIcon className="h-5 w-5" />
-          <span>{post.shares}</span>
         </button>
         <button onClick={handleSave} className="flex items-center space-x-1 hover:text-yellow-500">
           {isSaved ? <BookmarkIconSolid className="h-5 w-5 text-yellow-500" /> : <BookmarkIcon className="h-5 w-5" />}
@@ -246,7 +256,7 @@ function Post({ post, onLike, onComment, onShare, onSave, onReport, isOwnPost, o
             />
             <button
               onClick={() => setShowCommentModal(false)}
-              className="mt-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded w-full"
+              className="mt-4 px-4 py-2 bg-[#3b3b3b43] rounded w-full"
             >
               Close
             </button>

@@ -10,7 +10,7 @@ export default function PostsSection({ posts, onActionClick }) {
             <div>
               <Link 
                 to={`/user/${post.author.username}`}
-                className="flex items-center text-sm font-medium text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400"
+                className="flex items-center text-sm font-medium text-theme hover:underline"
               >
                 <img 
                   className="h-8 w-8 rounded-full mr-2"

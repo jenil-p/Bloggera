@@ -18,7 +18,6 @@ function UserProfile() {
     const fetchUserData = async () => {
       try {
         const response = await api.get(`/users/${username}`);
-        console.log(response);
         setUser(response.data.user);
         setPosts(response.data.posts);
         setLoading(false);

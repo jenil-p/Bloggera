@@ -27,8 +27,10 @@ function Profile() {
         setAvatarPreview(userResponse.data.avatar);
 
         const postsResponse = await api.get('/posts?author=me');
-        setPosts(postsResponse.data.filter(post => !post.isArchived));
-        setArchivedPosts(postsResponse.data.filter(post => post.isArchived));
+        setPosts(postsResponse.data);
+
+        const archivedPostsResponse = await api.get('/posts?author=me&archived=true');
+        setArchivedPosts(archivedPostsResponse.data);
 
         const commentsResponse = await api.get('/comments?author=me');
         setComments(commentsResponse.data);
@@ -128,15 +130,6 @@ function Profile() {
     setSavedPosts(updatePosts(savedPosts));
   };
 
-  const handleShare = (postId) => {
-    const updatePosts = (posts) =>
-      posts.map(post => (post._id === postId ? { ...post, shares: post.shares + 1 } : post));
-    setPosts(updatePosts(posts));
-    setArchivedPosts(updatePosts(archivedPosts));
-    setLikedPosts(updatePosts(likedPosts));
-    setSavedPosts(updatePosts(savedPosts));
-  };
-
   const handleReport = async (postId, reason, message) => {
     try {
       await api.post(`/posts/${postId}/report`, { reason, message });
@@ -186,7 +179,6 @@ function Profile() {
           <div className="flex items-center">
             <div className="relative">
               <img
-                // src={avatarPreview || 'https://via.placeholder.com/40'}
                 src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${avatarPreview}`}
                 alt="avatar"
                 className="h-16 w-16 rounded-full mr-4 object-cover"
@@ -273,7 +265,6 @@ function Profile() {
                 post={post}
                 onLike={handleLike}
                 onComment={handleComment}
-                onShare={handleShare}
                 onSave={handleSave}
                 onReport={handleReport}
                 isOwnPost={true}
@@ -296,7 +287,6 @@ function Profile() {
                 post={post}
                 onLike={handleLike}
                 onComment={handleComment}
-                onShare={handleShare}
                 onSave={handleSave}
                 onReport={handleReport}
                 isOwnPost={true}
@@ -341,7 +331,6 @@ function Profile() {
                 post={post}
                 onLike={handleLike}
                 onComment={handleComment}
-                onShare={handleShare}
                 onSave={handleSave}
                 onReport={handleReport}
                 isOwnPost={post.author._id.toString() === user._id}
@@ -364,7 +353,6 @@ function Profile() {
                 post={post}
                 onLike={handleLike}
                 onComment={handleComment}
-                onShare={handleShare}
                 onSave={handleSave}
                 onReport={handleReport}
                 isOwnPost={post.author._id.toString() === user._id}

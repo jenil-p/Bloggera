@@ -58,11 +58,15 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
   }
 });
 
-
+// Get posts
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const { author, liked, saved } = req.query;
-    let query = { isDeleted: false, isArchived: false };
+    const { author, liked, saved, archived } = req.query;
+    let query = { isDeleted: false };
+
+    if (archived !== 'true') {
+      query.isArchived = false; // Only exclude archived posts if archived=true is not specified
+    }
 
     if (author === 'me') {
       query.author = req.user._id;
@@ -91,10 +95,30 @@ router.get('/', authMiddleware, async (req, res) => {
       isSaved: req.user.savedPosts.includes(post._id),
       likes: post.likes.length,
       comments: post.comments.length,
-      shares: post.shares.length,
     })));
   } catch (error) {
     res.status(500).json({ message: 'Error fetching posts', error: error.message });
+  }
+});
+
+// Get single post
+router.get('/:id', authMiddleware, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id)
+      .populate('author', 'name username avatar')
+      .where({ isDeleted: false });
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+    res.json({
+      ...post.toJSON(),
+      isLiked: post.likes.includes(req.user._id),
+      isSaved: req.user.savedPosts.includes(post._id),
+      likes: post.likes.length,
+      comments: post.comments.length,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching post', error: error.message });
   }
 });
 
@@ -135,7 +159,6 @@ router.get('/search', authMiddleware, async (req, res) => {
         isSaved: req.user.savedPosts.includes(post._id),
         likes: post.likes.length,
         comments: post.comments.length,
-        shares: post.shares.length,
       })),
       users,
     });
@@ -170,7 +193,6 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
       isSaved: req.user.savedPosts.includes(post._id),
       likes: updatedPost.likes.length,
       comments: updatedPost.comments.length,
-      shares: updatedPost.shares.length,
     });
   } catch (error) {
     res.status(500).json({ message: 'Error liking post', error: error.message });
@@ -201,34 +223,9 @@ router.post('/:id/save', authMiddleware, async (req, res) => {
       isSaved: !isSaved,
       likes: post.likes.length,
       comments: post.comments.length,
-      shares: post.shares.length,
     });
   } catch (error) {
     res.status(500).json({ message: 'Error saving post', error: error.message });
-  }
-});
-
-// Share a post
-router.post('/:id/share', authMiddleware, async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id);
-    if (!post || post.isDeleted || post.isArchived) {
-      return res.status(404).json({ message: 'Post not found' });
-    }
-
-    post.shares.push(req.user._id);
-    await post.save();
-    const updatedPost = await Post.findById(post._id).populate('author', 'name username avatar');
-    res.json({
-      ...updatedPost.toJSON(),
-      isLiked: post.likes.includes(req.user._id),
-      isSaved: req.user.savedPosts.includes(post._id),
-      likes: post.likes.length,
-      comments: post.comments.length,
-      shares: post.shares.length,
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Error sharing post', error: error.message });
   }
 });
 
@@ -259,6 +256,7 @@ router.post('/:id/report', authMiddleware, async (req, res) => {
   }
 });
 
+// Delete a post
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -288,6 +286,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Archive/unarchive a post
 router.post('/:id/archive', authMiddleware, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -309,7 +308,6 @@ router.post('/:id/archive', authMiddleware, async (req, res) => {
       isSaved: req.user.savedPosts.includes(post._id),
       likes: post.likes.length,
       comments: post.comments.length,
-      shares: post.shares.length,
       isArchived: post.isArchived,
     });
   } catch (error) {
@@ -317,6 +315,7 @@ router.post('/:id/archive', authMiddleware, async (req, res) => {
   }
 });
 
+// Restrict/unrestrict comments
 router.post('/:id/restrict-comments', authMiddleware, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -328,7 +327,7 @@ router.post('/:id/restrict-comments', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized to restrict comments on this post' });
     }
 
-    post.restrictComments = !post.restrictComments || false;
+    post.restrictComments = !post.restrictComments;
     await post.save();
 
     const updatedPost = await Post.findById(post._id).populate('author', 'name username avatar');
@@ -338,7 +337,6 @@ router.post('/:id/restrict-comments', authMiddleware, async (req, res) => {
       isSaved: req.user.savedPosts.includes(post._id),
       likes: post.likes.length,
       comments: post.comments.length,
-      shares: post.shares.length,
       restrictComments: post.restrictComments,
     });
   } catch (error) {

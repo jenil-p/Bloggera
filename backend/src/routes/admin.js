@@ -10,7 +10,7 @@ const router = express.Router();
 // Get all users
 router.get('/users', adminMiddleware, async (req, res) => {
   try {
-    const users = await User.find().select('name username avatar email isSuspended isAdmin suspendedUntil');
+    const users = await User.find().select('name username avatar email isSuspended isAdmin suspendedUntil createdAt');
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching users', error: error.message });
