@@ -11,6 +11,7 @@ const postSchema = new mongoose.Schema({
   savedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', }],
   isArchived: { type: Boolean, default: false, },
   isDeleted: { type: Boolean, default: false, },
+  restrictComments: { type: Boolean, default: false },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Post', postSchema);

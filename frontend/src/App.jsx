@@ -4,7 +4,7 @@ import Navbar from './components/Navbar';
 import Enter from './pages/Enter';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
-import AdminDashboard from './pages/AdminDashboard';
+import Dashboard from './pages/admin/Dashboard';
 import UserProfile from './pages/UserProfile';
 import Search from './pages/Search';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -34,7 +34,7 @@ function App() {
 
               {/* Admin routes */}
               <Route element={<AdminProtectedRoute />}>
-                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin" element={<Dashboard />} />
               </Route>
 
               {/* Catch-all route */}

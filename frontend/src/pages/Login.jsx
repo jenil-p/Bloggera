@@ -20,6 +20,7 @@ function Login({ onSuccess, onSwitchToSignup }) {
 
       // Store JWT token in localStorage
       localStorage.setItem('token', token);
+      localStorage.setItem('userId', user.id);
 
       // Call onSuccess to close the modal
       onSuccess();

@@ -1,8 +1,13 @@
 const express = require('express');
 const connectDB = require('./src/config/db');
-const { router: authRoutes } = require('./src/routes/auth');
+const authRoutes = require('./src/routes/auth');
+const postRoutes = require('./src/routes/posts');
+const commentRoutes = require('./src/routes/comments');
+const usersRoutes = require('./src/routes/users');
+const adminRoutes = require('./src/routes/admin');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 
 dotenv.config();
 
@@ -15,17 +20,25 @@ connectDB();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'Uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/posts', postRoutes);
+app.use('/api/comments', commentRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ message: 'File upload error', error: err.message });
+  }
+  res.status(500).json({ message: 'Something went wrong!', error: err.message });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

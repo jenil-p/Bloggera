@@ -1,45 +1,38 @@
-// src/pages/Search.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Post from '../components/Post';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import api from '../utils/api';
 
 function Search() {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState({
-    posts: [],
-    users: [],
-  });
+  const [searchResults, setSearchResults] = useState({ posts: [], users: [] });
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
-    setSearchResults({
-      posts: [
-        {
-          id: 1,
-          author: { name: 'John Doe', username: 'johndoe', avatar: 'https://via.placeholder.com/40' },
-          content: `This post contains ${searchQuery}`,
-          image: null,
-          likes: 10,
-          comments: 5,
-          shares: 2,
-          isLiked: false,
-          isSaved: false,
-        },
-      ],
-      users: [
-        { name: 'John Doe', username: 'johndoe', avatar: 'https://via.placeholder.com/40' },
-      ],
-    });
+    if (!searchQuery) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await api.get(`/search?q=${encodeURIComponent(searchQuery)}`);
+      setSearchResults(response.data);
+      setLoading(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error searching');
+      setLoading(false);
+    }
   };
 
   const handleLike = (postId, isLiked) => {
     setSearchResults({
       ...searchResults,
       posts: searchResults.posts.map(post =>
-        post.id === postId ? { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 } : post
+        post._id === postId ? { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 } : post
       ),
     });
   };
@@ -48,9 +41,36 @@ function Search() {
     setSearchResults({
       ...searchResults,
       posts: searchResults.posts.map(post =>
-        post.id === postId ? { ...post, isSaved } : post
+        post._id === postId ? { ...post, isSaved } : post
       ),
     });
+  };
+
+  const handleComment = (postId, commentCount) => {
+    setSearchResults({
+      ...searchResults,
+      posts: searchResults.posts.map(post =>
+        post._id === postId ? { ...post, comments: commentCount } : post
+      ),
+    });
+  };
+
+  const handleShare = (postId) => {
+    setSearchResults({
+      ...searchResults,
+      posts: searchResults.posts.map(post =>
+        post._id === postId ? { ...post, shares: post.shares + 1 } : post
+      ),
+    });
+  };
+
+  const handleReport = async (postId, reason, message) => {
+    try {
+      await api.post(`/posts/${postId}/report`, { reason, message });
+      alert(`Reported post ${postId}: ${reason} - ${message}`);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error reporting post');
+    }
   };
 
   return (
@@ -73,47 +93,62 @@ function Search() {
           </button>
         </div>
       </form>
-      <div className="space-y-6">
-        {searchResults.users.length > 0 && (
-          <div>
-            <h3 className="text-lg font-bold text-theme mb-2">Users</h3>
-            <div className="space-y-2">
-              {searchResults.users.map(user => (
-                <Link
-                  key={user.username}
-                  to={`/user/${user.username}`}
-                  className="flex items-center p-2 bg-card rounded-lg shadow-md"
-                >
-                  <img src={user.avatar} alt="avatar" className="h-10 w-10 rounded-full mr-2" />
-                  <div>
-                    <p className="font-bold text-theme">{user.name}</p>
-                    <p className="text-gray-500">@{user.username}</p>
-                  </div>
-                </Link>
-              ))}
+      {error && <p className="text-red-500 text-center">{error}</p>}
+      {loading ? (
+        <p className="text-center text-theme">Searching...</p>
+      ) : (
+        <div className="space-y-6">
+          {searchResults.users.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-theme mb-2">Users</h3>
+              <div className="space-y-2">
+                {searchResults.users.map(user => (
+                  <Link
+                    key={user._id}
+                    to={`/user/${user.username}`}
+                    className="flex items-center p-2 bg-card rounded-lg shadow-md"
+                  >
+                    <img
+                      src={user.avatar || 'https://via.placeholder.com/40'}
+                      alt="avatar"
+                      className="h-10 w-10 rounded-full mr-2 object-cover"
+                    />
+                    <div>
+                      <p className="font-bold text-theme">{user.name}</p>
+                      <p className="text-gray-500">@{user.username}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-        {searchResults.posts.length > 0 && (
-          <div>
-            <h3 className="text-lg font-bold text-theme mb-2">Posts</h3>
-            <div className="space-y-4">
-              {searchResults.posts.map(post => (
-                <Post
-                  key={post.id}
-                  post={post}
-                  onLike={handleLike}
-                  onComment={() => alert('Comment functionality to be implemented')}
-                  onShare={() => alert('Share functionality to be implemented')}
-                  onSave={handleSave}
-                  onReport={(id, reason, message) => alert(`Reported post ${id}: ${reason} - ${message}`)}
-                  isOwnPost={false}
-                />
-              ))}
+          )}
+          {searchResults.posts.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-theme mb-2">Posts</h3>
+              <div className="space-y-4">
+                {searchResults.posts.map(post => (
+                  <Post
+                    key={post._id}
+                    post={post}
+                    onLike={handleLike}
+                    onComment={handleComment}
+                    onShare={handleShare}
+                    onSave={handleSave}
+                    onReport={handleReport}
+                    isOwnPost={post.author._id.toString() === localStorage.getItem('userId')}
+                    onDelete={() => {}}
+                    onArchive={() => {}}
+                    onRestrictComments={() => {}}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+          {searchResults.posts.length === 0 && searchResults.users.length === 0 && (
+            <p className="text-center text-theme">No results found</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

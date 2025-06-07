@@ -3,28 +3,25 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const router = express.Router();
+const {authMiddleware, adminMiddleware} = require('../middleware/authMiddleware');
 
 // Register route
 router.post('/register', async (req, res) => {
   try {
     const { name, username, email, password } = req.body;
 
-    // Validate input
     if (!name || !username || !email || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // Check if user exists
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
       return res.status(400).json({ message: 'Email or username already exists' });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user
     const user = new User({
       name,
       username,
@@ -34,7 +31,6 @@ router.post('/register', async (req, res) => {
 
     await user.save();
 
-    // Create and send JWT
     const token = jwt.sign(
       { userId: user._id, isAdmin: user.isAdmin },
       process.env.JWT_SECRET || 'your_jwt_secret',
@@ -61,29 +57,24 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate input
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Check if user is suspended
     if (user.isSuspended && user.suspendedUntil && user.suspendedUntil > new Date()) {
       return res.status(403).json({ message: 'Account is suspended' });
     }
 
-    // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Create and send JWT
     const token = jwt.sign(
       { userId: user._id, isAdmin: user.isAdmin },
       process.env.JWT_SECRET || 'your_jwt_secret',
@@ -107,31 +98,19 @@ router.post('/login', async (req, res) => {
 
 // Logout route
 router.post('/logout', (req, res) => {
-  // Client-side will handle token removal
-  // Optionally implement token blacklisting here if needed
   res.json({ message: 'Logged out successfully' });
 });
 
-// Middleware to verify JWT
-const authMiddleware = async (req, res, next) => {
+router.get('/me', authMiddleware, async (req, res) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ message: 'No authentication token provided' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
-    const user = await User.findById(decoded.userId).select('-password');
-
+    const user = await User.findById(req.user._id).select('name username avatar bio isAdmin isSuspended blockedUsers likedPosts commentedPosts savedPosts suspendedUntil');
     if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'User not found' });
     }
-
-    req.user = user;
-    next();
+    res.json(user);
   } catch (error) {
-    res.status(401).json({ message: 'Invalid authentication token' });
+    res.status(500).json({ message: 'Error fetching user', error: error.message });
   }
-};
+});
 
-module.exports = { router, authMiddleware };
+module.exports = router;

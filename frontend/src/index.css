@@ -3,23 +3,39 @@
 :root {
   --bg-color: #ffffff;
   --text-color: #000000;
+  --text-red : #ff0000b5;
+  --background-red : #f292924d;
+  --text-green : #154e1a;
+  --background-green : #00800038;
   --card-bg: #f0f0f0;
   --border-color: #e5e7eb;
   --hover-bg: #e5e7eb;
   --gradient-from: #1d4ed8;
   --gradient-to: #6b21a8;
   --border-color : #000000;
+  --bg-icon : #bdbcbc99;
+  --green-600: #16a34a;
+  --green-700: #15803d;
+  --indigo-500: #6366f1;
 }
 
 [data-theme="dark"] {
-  --bg-color: #18202b;
+  --bg-color: #000000;
   --text-color: #ffffff;
+  --text-red : #7e1515;
+  --background-red: #f2a7a7c2;
+  --text-green : #0c992b;
+  --background-green: #4cff682b;
   --card-bg: #1f2937;
   --border-color: #374151;
   --hover-bg: #374151;
   --gradient-from: #3b82f6;
   --gradient-to: #a855f7;
   --border-color: #747070;
+  --bg-icon : #bdbcbc1a;
+   --green-600: #22c55e;
+  --green-700: #16a34a;
+  --indigo-500: #818cf8;
 }
 
 body {
@@ -31,13 +47,30 @@ body {
   color: var(--text-color);
 }
 
-/* Custom classes for components */
 .bg-card {
   background-color: var(--card-bg);
 }
 
+.background{
+  background-color: var(--bg-color);
+}
+
 .border-card{
   border-color: var(--border-color);
+}
+
+.bg-icon{
+  background-color: var(--bg-icon);
+}
+
+.red{
+  background-color: var(--background-red);
+  color: var(--text-red);
+}
+
+.green{
+  background-color: var(--background-green);
+  color: var(--text-green);
 }
 
 .border-theme {
