@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import Post from '../components/Post';
+import Post from '../components/postFormation/Post';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
 import { CameraIcon } from '@heroicons/react/24/outline';
