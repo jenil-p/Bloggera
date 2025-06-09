@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import Post from '../components/Post';
+import Post from './posts/Post';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';

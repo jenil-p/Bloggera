@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import Modal from '../components/Modal';
+import LogInModal from '../components/LogInModal';
 import Login from './Login';
 import Signup from './Signup';
 import '../index.css';
@@ -46,12 +46,12 @@ function Enter() {
       </div>
 
       {/* Modals */}
-      <Modal isOpen={showLogin} onClose={() => setShowLogin(false)} title="Login">
+      <LogInModal isOpen={showLogin} onClose={() => setShowLogin(false)} title="Login">
         <Login onSuccess={() => setShowLogin(false)} onSwitchToSignup={handleSwitchToSignup} />
-      </Modal>
-      <Modal isOpen={showSignup} onClose={() => setShowSignup(false)} title="Signup">
+      </LogInModal>
+      <LogInModal isOpen={showSignup} onClose={() => setShowSignup(false)} title="Signup">
         <Signup onSuccess={() => setShowSignup(false)} onSwitchToLogin={handleSwitchToLogin} />
-      </Modal>
+      </LogInModal>
     </div>
   );
 }

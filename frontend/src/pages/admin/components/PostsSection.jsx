@@ -1,4 +1,4 @@
-import Post from '../../../components/postFormation/Post';
+import Post from '../../posts/Post';
 import { Link } from 'react-router-dom';
 
 export default function PostsSection({ posts, onActionClick }) {

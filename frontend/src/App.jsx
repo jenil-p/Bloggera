@@ -2,9 +2,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/Navbar';
 import Enter from './pages/Enter';
+import Post from './pages/posts/Post';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
-import PostDetail from './components/PostDetail';
 import Dashboard from './pages/admin/Dashboard';
 import UserProfile from './pages/UserProfile';
 import Search from './pages/Search';
@@ -31,7 +31,8 @@ function App() {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/user/:username" element={<UserProfile />} />
-                <Route path="/post/:id" element={<PostDetail />} />
+                {/* <Route path="/post/:id" element={<PostDetail />} /> */}
+                {/* <Route path="/create-post" element={<CreatePostPage />} /> */}
               </Route>
 
               {/* Admin routes */}

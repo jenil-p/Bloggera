@@ -1,0 +1,175 @@
+/* Base styles for Tiptap editor content */
+.prose {
+  font-family: sans-serif;
+  line-height: 1.6;
+  color: #333; /* Default text color */
+}
+
+.dark .prose {
+  color: #c9d1d9; /* Dark mode text color */
+}
+
+/* Headings */
+.prose h1 {
+  font-size: 2.25em; /* 36px */
+  font-weight: 700;
+  margin-top: 1.5em;
+  margin-bottom: 0.8em;
+  color: #1a202c; /* Heading color */
+}
+
+.dark .prose h1 {
+  color: #e2e8f0;
+}
+
+.prose h2 {
+  font-size: 1.75em; /* 28px */
+  font-weight: 600;
+  margin-top: 1.2em;
+  margin-bottom: 0.7em;
+  color: #1a202c;
+}
+
+.dark .prose h2 {
+  color: #e2e8f0;
+}
+
+.prose h3 {
+  font-size: 1.25em; /* 20px */
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.6em;
+  color: #1a202c;
+}
+
+.dark .prose h3 {
+  color: #e2e8f0;
+}
+
+/* Paragraphs */
+.prose p {
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+/* Links */
+.prose a {
+  color: #3b82f6; /* Blue for links */
+  text-decoration: underline;
+}
+
+.prose a:hover {
+  color: #2563eb;
+}
+
+/* Strong (Bold) */
+.prose strong {
+  font-weight: bold;
+}
+
+/* Em (Italic) */
+.prose em {
+  font-style: italic;
+}
+
+/* Underline */
+.prose u {
+  text-decoration: underline;
+}
+
+/* Strikethrough */
+.prose s {
+  text-decoration: line-through;
+}
+
+/* Blockquotes */
+.prose blockquote {
+  border-left: 4px solid #e2e8f0;
+  padding-left: 1em;
+  margin-left: 0;
+  font-style: italic;
+  color: #64748b;
+}
+
+.dark .prose blockquote {
+  border-left-color: #4a5568;
+  color: #a0aec0;
+}
+
+/* Lists */
+.prose ul, .prose ol {
+  margin-top: 1em;
+  margin-bottom: 1em;
+  padding-left: 1.5em;
+}
+
+.prose li {
+  margin-bottom: 0.5em;
+}
+
+/* Code Blocks */
+.prose pre {
+  background-color: #f8f8f8;
+  color: #333;
+  padding: 1em;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+}
+
+.dark .prose pre {
+  background-color: #2d3748;
+  color: #e2e8f0;
+}
+
+.prose code {
+  background-color: #edf2f7;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+.dark .prose code {
+  background-color: #4a5568;
+  color: #e2e8f0;
+}
+
+.prose pre code {
+  background-color: transparent;
+  padding: 0;
+  font-size: 1em;
+}
+
+/* Images */
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+/* Horizontal Rule */
+.prose hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 2em;
+  margin-bottom: 2em;
+}
+
+.dark .prose hr {
+  border-top-color: #4a5568;
+}
+
+/* Editor specific styles for Tiptap contentEditable area */
+.tiptap-editor {
+  background-color: var(--color-card-background); /* Uses a CSS variable, adjust if needed */
+  border-radius: 8px;
+  min-height: 150px;
+  color: var(--color-text-theme); /* Uses a CSS variable, adjust if needed */
+}
+
+/* Focus styles for the editor */
+.tiptap-editor.focus-visible:focus {
+  outline: 2px solid #3b82f6; /* Blue outline on focus */
+  outline-offset: 2px;
+}

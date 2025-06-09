@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import ReportsSection from './components/ReportsSection';
 import UsersSection from './components/UsersSection';
-import PostsSection from './components/PostsSection';
+// import PostsSection from './components/PostsSection';
 import StatsCard from './components/StatsCard';
 import ActionModal from './components/ActionModal';
 import '../../index.css'
@@ -265,12 +265,12 @@ function Dashboard() {
               onActionClick={setShowActionModal} 
             />
           )}
-          {activeTab === 'posts' && (
+          {/* {activeTab === 'posts' && (
             <PostsSection 
               posts={data.posts} 
               onActionClick={setShowActionModal} 
             />
-          )}
+          )} */}
         </div>
       </div>
 

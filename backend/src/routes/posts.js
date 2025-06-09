@@ -12,14 +12,14 @@ const mongoose = require('mongoose');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
-  destination: './uploads/posts/',
+  destination: './Uploads/posts/',
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
   },
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const filetypes = /jpeg|jpg|png|gif/;
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
@@ -31,41 +31,109 @@ const upload = multer({
   },
 });
 
-// Create a post
+// In your posts.js file, inside the router.post('/') route:
+
 router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
   try {
     const { content, tags } = req.body;
+
     if (!content) {
       return res.status(400).json({ message: 'Content is required' });
     }
 
+    // Validate Tiptap/ProseMirror content structure
+    let parsedContent;
+    try {
+      parsedContent = JSON.parse(content);
+    } catch (err) {
+      return res.status(400).json({ message: 'Invalid content format (not valid JSON)' });
+    }
+
+    // Check if the parsed content is a valid Tiptap doc structure
+    if (!parsedContent || parsedContent.type !== 'doc' || !Array.isArray(parsedContent.content)) {
+      return res.status(400).json({ message: 'Invalid Tiptap document structure' });
+    }
+
+    // Determine if the Tiptap content is truly empty (e.g., only an empty paragraph)
+    let hasMeaningfulContent = false;
+    if (parsedContent.content.length > 0) {
+      for (const node of parsedContent.content) {
+        // If it's an image node, it definitely has content
+        if (node.type === 'image' && node.attrs && node.attrs.src) {
+          hasMeaningfulContent = true;
+          break;
+        }
+        // For text-based nodes (paragraph, heading, etc.), check if they contain non-empty text
+        if (node.content && Array.isArray(node.content) && node.content.length > 0) {
+          if (node.content.some(childNode => childNode.type === 'text' && childNode.text.trim().length > 0)) {
+            hasMeaningfulContent = true;
+            break;
+          }
+        }
+        // You may need to add checks for other node types (e.g., lists, code blocks)
+        // if you want them to be considered as "meaningful content" even without direct text.
+        // For example, for lists:
+        if ((node.type === 'bulletList' || node.type === 'orderedList') && node.content && node.content.length > 0) {
+          if (node.content.some(listItem =>
+            listItem.type === 'listItem' &&
+            Array.isArray(listItem.content) &&
+            listItem.content.length > 0 &&
+            listItem.content.some(para =>
+              para.content &&
+              Array.isArray(para.content) &&
+              para.content.some(textNode =>
+                textNode.type === 'text' && textNode.text.trim().length > 0
+              )
+            )
+          )) {
+            hasMeaningfulContent = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!hasMeaningfulContent) {
+      return res.status(400).json({ message: 'Post content cannot be empty' });
+    }
+
+    // The rest of your post creation logic remains the same
     const post = new Post({
       author: req.user._id,
-      content,
+      content, // This will store the stringified JSON
       image: req.file ? `/uploads/posts/${req.file.filename}` : null,
       tags: tags ? JSON.parse(tags) : [],
+      likes: [],
+      comments: [],
+      savedBy: [],
+      isArchived: false,
+      isDeleted: false,
+      restrictComments: false,
     });
 
     await post.save();
-    await User.findByIdAndUpdate(req.user._id, {
-      $push: { commentedPosts: post._id },
-    });
-
     const populatedPost = await Post.findById(post._id).populate('author', 'name username avatar');
-    res.status(201).json(populatedPost);
+    res.status(201).json({
+      ...populatedPost.toJSON(),
+      isLiked: false,
+      isSaved: false,
+      likes: 0,
+      comments: 0,
+    });
   } catch (error) {
+    console.error('Error creating post:', error.stack);
     res.status(500).json({ message: 'Error creating post', error: error.message });
   }
 });
 
-// Get posts
+
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const { author, liked, saved, archived } = req.query;
     let query = { isDeleted: false };
 
     if (archived !== 'true') {
-      query.isArchived = false; // Only exclude archived posts if archived=true is not specified
+      query.isArchived = false;
     }
 
     if (author === 'me') {
@@ -97,32 +165,44 @@ router.get('/', authMiddleware, async (req, res) => {
       comments: post.comments.length,
     })));
   } catch (error) {
+    console.error('Error fetching posts:', error.stack);
     res.status(500).json({ message: 'Error fetching posts', error: error.message });
   }
 });
 
-// Get single post
+
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid post ID' });
+    }
+
     const post = await Post.findById(req.params.id)
       .populate('author', 'name username avatar')
       .where({ isDeleted: false });
+
     if (!post) {
       return res.status(404).json({ message: 'Post not found' });
     }
+
+    const currentUser = await User.findById(req.user._id).select('savedPosts');
+    if (!currentUser) {
+      return res.status(404).json({ message: 'Current user not found' });
+    }
+
     res.json({
       ...post.toJSON(),
-      isLiked: post.likes.includes(req.user._id),
-      isSaved: req.user.savedPosts.includes(post._id),
+      isLiked: post.likes.some(id => id.toString() === req.user._id.toString()),
+      isSaved: currentUser.savedPosts.some(id => id.toString() === post._id.toString()),
       likes: post.likes.length,
       comments: post.comments.length,
     });
   } catch (error) {
+    console.error('Error fetching post:', error.stack);
     res.status(500).json({ message: 'Error fetching post', error: error.message });
   }
 });
 
-// Get posts by search query
 router.get('/search', authMiddleware, async (req, res) => {
   try {
     const { q } = req.query;
@@ -341,6 +421,20 @@ router.post('/:id/restrict-comments', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Error restricting comments', error: error.message });
+  }
+});
+
+// Image upload endpoint for Lexical editor
+router.post('/upload-image', authMiddleware, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image uploaded' });
+    }
+    const imageUrl = `${process.env.UPLOADS_URL || 'http://localhost:3000'}/posts/${req.file.filename}`;
+    res.json({ imageUrl });
+  } catch (error) {
+    console.error('Error uploading image:', error.stack);
+    res.status(500).json({ message: 'Error uploading image', error: error.message });
   }
 });
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import Post from '../components/Post';
-import CreatePost from '../components/CreatePost';
+import Post from './posts/Post';
+import CreatePost from './posts/CreatePost';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
 
@@ -9,6 +9,7 @@ function Home() {
   const [posts, setPosts] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showCreatePostModal, setShowCreatePostModal] = useState(false);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -26,11 +27,12 @@ function Home() {
 
   const handleCreatePost = (newPost) => {
     setPosts([newPost, ...posts]);
+    setShowCreatePostModal(false);
   };
 
-  const handleLike = (postId, isLiked) => {
+  const handleLike = (postId, isLiked, likes) => {
     setPosts(posts.map(post =>
-      post._id === postId ? { ...post, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 } : post
+      post._id === postId ? { ...post, isLiked, likes } : post
     ));
   };
 
@@ -47,12 +49,6 @@ function Home() {
   const handleComment = (postId, commentCount) => {
     setPosts(posts.map(post =>
       post._id === postId ? { ...post, comments: commentCount } : post
-    ));
-  };
-
-  const handleShare = (postId) => {
-    setPosts(posts.map(post =>
-      post._id === postId ? { ...post, shares: post.shares + 1 } : post
     ));
   };
 
@@ -74,7 +70,17 @@ function Home() {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <CreatePost onCreate={handleCreatePost} />
+      <button
+        onClick={() => setShowCreatePostModal(true)}
+        className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+      >
+        Create Post
+      </button>
+      <CreatePost
+        isOpen={showCreatePostModal}
+        onClose={() => setShowCreatePostModal(false)}
+        onPostCreated={handleCreatePost}
+      />
       {error && <p className="text-red-500 text-center">{error}</p>}
       {loading ? (
         <p className="text-center text-theme">Loading posts...</p>
@@ -88,7 +94,6 @@ function Home() {
               post={post}
               onLike={handleLike}
               onComment={handleComment}
-              onShare={handleShare}
               onSave={handleSave}
               onReport={handleReport}
               isOwnPost={post.author._id.toString() === localStorage.getItem('userId')}
