@@ -8,14 +8,14 @@ export default function PostsSection({ posts, onActionClick }) {
         <div key={post._id} className="p-6">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <Link 
+              <Link
                 to={`/user/${post.author.username}`}
                 className="flex items-center text-sm font-medium text-theme hover:underline"
               >
-                <img 
+                <img
                   className="h-8 w-8 rounded-full mr-2"
                   src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${post.author.avatar}`}
-                  alt={post.author.username} 
+                  alt={post.author.username}
                 />
                 {post.author.username}
               </Link>
@@ -30,19 +30,17 @@ export default function PostsSection({ posts, onActionClick }) {
               Delete
             </button>
           </div>
-          
-          <Post 
-            post={post} 
-            onLike={() => {}} 
-            onComment={() => {}} 
-            onShare={() => {}} 
-            onSave={() => {}} 
-            onReport={() => {}} 
+
+          <Post
+            post={post}
+            onLike={() => {}}
+            onComment={() => {}}
+            onSave={() => {}}
+            onReport={() => {}}
             isOwnPost={false}
             onDelete={() => {}}
             onArchive={() => {}}
             onRestrictComments={() => {}}
-            compactView={true}
           />
         </div>
       ))}
