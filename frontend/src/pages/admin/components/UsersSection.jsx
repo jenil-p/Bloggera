@@ -22,7 +22,7 @@ export default function UsersSection({ users, onActionClick }) {
         </thead>
         <tbody className="background divide-y divide-gray-200 dark:divide-gray-700">
           {users.map(user => (
-            
+
             <tr key={user._id} className="user">
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex items-center">
@@ -55,7 +55,7 @@ export default function UsersSection({ users, onActionClick }) {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex justify-end space-x-2">
-                  {!user.isSuspended && (
+                  {!user.isSuspended ? (
                     <>
                       <button
                         onClick={() => onActionClick({ type: 'block_user', targetId: user._id })}
@@ -70,6 +70,14 @@ export default function UsersSection({ users, onActionClick }) {
                         Suspend
                       </button>
                     </>
+                  ) : (
+                    // Show Unsuspend button if user is suspended
+                    <button
+                      onClick={() => onActionClick({ type: 'unsuspend_user', targetId: user._id })}
+                      className="green cursor-pointer rounded-md p-1" // Use a suitable color, e.g., green
+                    >
+                      Unsuspend
+                    </button>
                   )}
                   <Link
                     to={`/user/${user.username}`}

@@ -49,7 +49,7 @@ router.delete('/posts/:id', adminMiddleware, async (req, res) => {
   }
 });
 
-// Block a user
+// Block a user (Note: This endpoint currently marks as blocked by adding to blockedUsers array, not setting isSuspended)
 router.post('/block/:userId', adminMiddleware, async (req, res) => {
   try {
     const { reason } = req.body;
@@ -118,6 +118,37 @@ router.post('/suspend/:userId', adminMiddleware, async (req, res) => {
     res.json({ message: 'User suspended successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error suspending user', error: error.message });
+  }
+});
+
+// Unsuspend a user
+router.post('/unsuspend/:userId', adminMiddleware, async (req, res) => {
+  try {
+    const { reason } = req.body; // Added: reason from request body
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!reason) { // Added: Check if reason is provided
+      return res.status(400).json({ message: 'Reason is required for unsuspension' });
+    }
+
+    user.isSuspended = false;
+    user.suspendedUntil = null; // Corrected: Set to null to indicate not suspended
+    await user.save();
+
+    await AdminAction.create({
+      admin: req.user._id,
+      actionType: 'unsuspend_user',
+      targetUser: user._id,
+      reason, // Used reason from req.body
+      details: `Unsuspended`,
+    });
+
+    res.json({ message: 'User unsuspended successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error unsuspending user', error: error.message });
   }
 });
 

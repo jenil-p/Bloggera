@@ -81,7 +81,11 @@ function Dashboard() {
           }));
           break;
         case 'block_user':
+          // Note: The backend 'block_user' endpoint only adds to blockedUsers, it does not set isSuspended.
+          // If you intend 'block_user' to also suspend, you'll need to modify the backend.
           response = await api.post(`/admin/block/${targetId}`, { reason });
+          // Assuming a blocked user is also considered 'suspended' in the frontend display logic here
+          // You might need to refine this if 'block' and 'suspend' are distinct states in UI.
           setData(prev => ({
             ...prev,
             users: prev.users.map(user =>
@@ -99,16 +103,34 @@ function Dashboard() {
           setData(prev => ({
             ...prev,
             users: prev.users.map(user =>
-              user._id === targetId ? { 
-                ...user, 
-                isSuspended: true, 
-                suspendedUntil: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000) 
+              user._id === targetId ? {
+                ...user,
+                isSuspended: true,
+                suspendedUntil: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000)
               } : user
             ),
             stats: {
               ...prev.stats,
               activeUsers: prev.stats.activeUsers - 1,
               suspendedUsers: prev.stats.suspendedUsers + 1
+            }
+          }));
+          break;
+        case 'unsuspend_user': // Added: New case for unsuspend_user
+          response = await api.post(`/admin/unsuspend/${targetId}`, { reason }); // Pass reason to backend
+          setData(prev => ({
+            ...prev,
+            users: prev.users.map(user =>
+              user._id === targetId ? {
+                ...user,
+                isSuspended: false,
+                suspendedUntil: null // Set to null after unsuspension
+              } : user
+            ),
+            stats: {
+              ...prev.stats,
+              activeUsers: prev.stats.activeUsers + 1, // Increment active users
+              suspendedUsers: prev.stats.suspendedUsers - 1 // Decrement suspended users
             }
           }));
           break;
@@ -182,40 +204,40 @@ function Dashboard() {
       {/* Stats Overview */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <StatsCard 
-            title="Total Users" 
-            value={data.stats.totalUsers} 
-            icon="👥" 
-            trend="up" 
-            change="5% from last week" 
+          <StatsCard
+            title="Total Users"
+            value={data.stats.totalUsers}
+            icon="👥"
+            trend="up"
+            change="5% from last week"
           />
-          <StatsCard 
-            title="Active Users" 
-            value={data.stats.activeUsers} 
-            icon="✅" 
-            trend="up" 
-            change="2% from last week" 
+          <StatsCard
+            title="Active Users"
+            value={data.stats.activeUsers}
+            icon="✅"
+            trend="up"
+            change="2% from last week"
           />
-          <StatsCard 
-            title="Suspended Users" 
-            value={data.stats.suspendedUsers} 
-            icon="⛔" 
-            trend="down" 
-            change="10% from last week" 
+          <StatsCard
+            title="Suspended Users"
+            value={data.stats.suspendedUsers}
+            icon="⛔"
+            trend="down"
+            change="10% from last week"
           />
-          <StatsCard 
-            title="Total Posts" 
-            value={data.stats.totalPosts} 
-            icon="📝" 
-            trend="up" 
-            change="15% from last week" 
+          <StatsCard
+            title="Total Posts"
+            value={data.stats.totalPosts}
+            icon="📝"
+            trend="up"
+            change="15% from last week"
           />
-          <StatsCard 
-            title="Reported Posts" 
-            value={data.stats.reportedPosts} 
-            icon="⚠️" 
-            trend="down" 
-            change="8% from last week" 
+          <StatsCard
+            title="Reported Posts"
+            value={data.stats.reportedPosts}
+            icon="⚠️"
+            trend="down"
+            change="8% from last week"
           />
         </div>
 
@@ -253,22 +275,22 @@ function Dashboard() {
         {/* Tab Content */}
         <div className="background rounded-lg shadow overflow-hidden">
           {activeTab === 'reports' && (
-            <ReportsSection 
-              reports={data.reports} 
-              posts={data.posts} 
-              onActionClick={setShowActionModal} 
+            <ReportsSection
+              reports={data.reports}
+              posts={data.posts}
+              onActionClick={setShowActionModal}
             />
           )}
           {activeTab === 'users' && (
-            <UsersSection 
-              users={data.users} 
-              onActionClick={setShowActionModal} 
+            <UsersSection
+              users={data.users}
+              onActionClick={setShowActionModal}
             />
           )}
           {activeTab === 'posts' && (
-            <PostsSection 
-              posts={data.posts} 
-              onActionClick={setShowActionModal} 
+            <PostsSection
+              posts={data.posts}
+              onActionClick={setShowActionModal}
             />
           )}
         </div>
@@ -276,8 +298,8 @@ function Dashboard() {
 
       {/* Action Modal */}
       {showActionModal && (
-        <ActionModal 
-          type={showActionModal.type} 
+        <ActionModal
+          type={showActionModal.type}
           targetId={showActionModal.targetId}
           onClose={() => setShowActionModal(null)}
           onConfirm={handleAction}
