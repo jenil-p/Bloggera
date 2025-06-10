@@ -278,10 +278,10 @@ function Profile() {
       )}
       {activeTab === 'archived' && (
         <div className="space-y-4">
-          {archivedPosts.length === 0 ? (
+          {archivedPosts.filter(post => post.isArchived).length === 0 ? (
             <p className="text-center text-theme">No archived posts</p>
           ) : (
-            archivedPosts.map(post => (
+            archivedPosts.filter(post => post.isArchived).map(post => (
               <Post
                 key={post._id}
                 post={post}
