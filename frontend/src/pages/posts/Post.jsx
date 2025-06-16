@@ -142,7 +142,7 @@ function Post({
     <div className="bg-card shadow-md rounded-lg p-4 mb-4 border border-theme">
       {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
       <div className="flex items-center justify-between mb-4">
-        <Link to={`/profile/${post.author.username}`} className="flex items-center">
+        <Link to={`/user/${post.author.username}`} className="flex items-center">
           <img
             src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${post.author.avatar}`}
             alt="avatar"
