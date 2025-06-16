@@ -155,32 +155,32 @@ function Post({
         </Link>
         {isOwnPost && (
           <div className="relative">
-            <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-full hover:bg-[#9292922e] text-theme">
+            <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-full hover:bg-[#ffffff] text-theme">
               <EllipsisHorizontalIcon className="h-6 w-6" />
             </button>
             {showMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-card border border-theme rounded-md shadow-lg z-10">
                 <button
                   onClick={handleDelete}
-                  className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-[#9292922e]"
+                  className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-[#ffffff]"
                 >
                   Delete Post
                 </button>
                 <button
                   onClick={handleArchive}
-                  className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#9292922e]"
+                  className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#ffffff]"
                 >
                   {post.isArchived ? 'Unarchive Post' : 'Archive Post'}
                 </button>
                 <button
                   onClick={handleRestrictComments}
-                  className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#9292922e]"
+                  className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#ffffff]"
                 >
                   {post.restrictComments ? 'Allow Comments' : 'Restrict Comments'}
                 </button>
                 <button
                   onClick={handleCopyLink}
-                  className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#9292922e]"
+                  className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#ffffff]"
                 >
                   Copy Link
                 </button>

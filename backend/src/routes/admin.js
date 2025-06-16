@@ -49,7 +49,7 @@ router.delete('/posts/:id', adminMiddleware, async (req, res) => {
   }
 });
 
-// Block a user (Note: This endpoint currently marks as blocked by adding to blockedUsers array, not setting isSuspended)
+// Block a user
 router.post('/block/:userId', adminMiddleware, async (req, res) => {
   try {
     const { reason } = req.body;
@@ -124,25 +124,25 @@ router.post('/suspend/:userId', adminMiddleware, async (req, res) => {
 // Unsuspend a user
 router.post('/unsuspend/:userId', adminMiddleware, async (req, res) => {
   try {
-    const { reason } = req.body; // Added: reason from request body
+    const { reason } = req.body;
     const user = await User.findById(req.params.userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (!reason) { // Added: Check if reason is provided
+    if (!reason) {
       return res.status(400).json({ message: 'Reason is required for unsuspension' });
     }
 
     user.isSuspended = false;
-    user.suspendedUntil = null; // Corrected: Set to null to indicate not suspended
+    user.suspendedUntil = null;
     await user.save();
 
     await AdminAction.create({
       admin: req.user._id,
       actionType: 'unsuspend_user',
       targetUser: user._id,
-      reason, // Used reason from req.body
+      reason,
       details: `Unsuspended`,
     });
 
@@ -182,17 +182,14 @@ router.post('/reports/:reportId/resolve', adminMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Reason is required' });
     }
 
-    // Mark the report as resolved
     report.status = 'resolved';
     await report.save();
 
-    // Delete the associated post (similar to the delete post endpoint)
     const post = report.post;
     if (!post.isDeleted && !post.isArchived) {
       post.isDeleted = true;
       await post.save();
 
-      // Mark associated comments as deleted
       await Comment.updateMany({ post: post._id, isDeleted: false }, { isDeleted: true });
 
       await AdminAction.create({
@@ -203,7 +200,6 @@ router.post('/reports/:reportId/resolve', adminMiddleware, async (req, res) => {
       });
     }
 
-    // Log the resolve action
     await AdminAction.create({
       admin: req.user._id,
       actionType: 'resolve_report',

@@ -4,6 +4,7 @@ import api from '../../utils/api';
 import ReportsSection from './components/ReportsSection';
 import UsersSection from './components/UsersSection';
 import PostsSection from './components/PostsSection';
+import CategoriesSection from './components/CategoriesSection';
 import StatsCard from './components/StatsCard';
 import ActionModal from './components/ActionModal';
 import '../../index.css'
@@ -13,12 +14,14 @@ function Dashboard() {
     reports: [],
     users: [],
     posts: [],
+    categories: [],
     stats: {
       totalUsers: 0,
       activeUsers: 0,
       suspendedUsers: 0,
       totalPosts: 0,
-      reportedPosts: 0
+      reportedPosts: 0,
+      totalCategories: 0,
     }
   });
   const [loading, setLoading] = useState(true);
@@ -30,10 +33,11 @@ function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [reportsRes, usersRes, postsRes] = await Promise.all([
+        const [reportsRes, usersRes, postsRes, categoriesRes] = await Promise.all([
           api.get('/admin/reports'),
           api.get('/admin/users'),
-          api.get('/posts')
+          api.get('/posts'),
+          api.get('/categories'),
         ]);
 
         const activeUsers = usersRes.data.filter(u => !u.isSuspended).length;
@@ -43,12 +47,14 @@ function Dashboard() {
           reports: reportsRes.data,
           users: usersRes.data,
           posts: postsRes.data,
+          categories: categoriesRes.data,
           stats: {
             totalUsers: usersRes.data.length,
             activeUsers,
             suspendedUsers,
             totalPosts: postsRes.data.length,
-            reportedPosts: reportsRes.data.length
+            reportedPosts: reportsRes.data.length,
+            totalCategories: categoriesRes.data.length,
           }
         });
         setLoading(false);
@@ -81,11 +87,7 @@ function Dashboard() {
           }));
           break;
         case 'block_user':
-          // Note: The backend 'block_user' endpoint only adds to blockedUsers, it does not set isSuspended.
-          // If you intend 'block_user' to also suspend, you'll need to modify the backend.
           response = await api.post(`/admin/block/${targetId}`, { reason });
-          // Assuming a blocked user is also considered 'suspended' in the frontend display logic here
-          // You might need to refine this if 'block' and 'suspend' are distinct states in UI.
           setData(prev => ({
             ...prev,
             users: prev.users.map(user =>
@@ -116,21 +118,21 @@ function Dashboard() {
             }
           }));
           break;
-        case 'unsuspend_user': // Added: New case for unsuspend_user
-          response = await api.post(`/admin/unsuspend/${targetId}`, { reason }); // Pass reason to backend
+        case 'unsuspend_user':
+          response = await api.post(`/admin/unsuspend/${targetId}`, { reason });
           setData(prev => ({
             ...prev,
             users: prev.users.map(user =>
               user._id === targetId ? {
                 ...user,
                 isSuspended: false,
-                suspendedUntil: null // Set to null after unsuspension
+                suspendedUntil: null
               } : user
             ),
             stats: {
               ...prev.stats,
-              activeUsers: prev.stats.activeUsers + 1, // Increment active users
-              suspendedUsers: prev.stats.suspendedUsers - 1 // Decrement suspended users
+              activeUsers: prev.stats.activeUsers + 1,
+              suspendedUsers: prev.stats.suspendedUsers - 1
             }
           }));
           break;
@@ -170,6 +172,28 @@ function Dashboard() {
             }
           }));
           break;
+        case 'create_category':
+          response = await api.post('/admin/categories', { name: reason }); // Using 'reason' as category name
+          setData(prev => ({
+            ...prev,
+            categories: [...prev.categories, response.data],
+            stats: {
+              ...prev.stats,
+              totalCategories: prev.stats.totalCategories + 1
+            }
+          }));
+          break;
+        case 'delete_category':
+          await api.delete(`/admin/categories/${targetId}`);
+          setData(prev => ({
+            ...prev,
+            categories: prev.categories.filter(category => category._id !== targetId),
+            stats: {
+              ...prev.stats,
+              totalCategories: prev.stats.totalCategories - 1
+            }
+          }));
+          break;
         default:
           break;
       }
@@ -203,7 +227,7 @@ function Dashboard() {
 
       {/* Stats Overview */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
           <StatsCard
             title="Total Users"
             value={data.stats.totalUsers}
@@ -239,6 +263,13 @@ function Dashboard() {
             trend="down"
             change="8% from last week"
           />
+          <StatsCard
+            title="Total Categories"
+            value={data.stats.totalCategories}
+            icon="🏷️"
+            trend="up"
+            change="New this week"
+          />
         </div>
 
         {/* Error Message */}
@@ -269,6 +300,12 @@ function Dashboard() {
             >
               Posts ({data.posts.length})
             </button>
+            <button
+              onClick={() => setActiveTab('categories')}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'categories' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-theme hover:border-gray-300 dark:hover:border-gray-600'}`}
+            >
+              Categories ({data.stats.totalCategories})
+            </button>
           </nav>
         </div>
 
@@ -290,6 +327,12 @@ function Dashboard() {
           {activeTab === 'posts' && (
             <PostsSection
               posts={data.posts}
+              onActionClick={setShowActionModal}
+            />
+          )}
+          {activeTab === 'categories' && (
+            <CategoriesSection
+              categories={data.categories}
               onActionClick={setShowActionModal}
             />
           )}

@@ -8,6 +8,7 @@ import Profile from './pages/Profile';
 import Dashboard from './pages/admin/Dashboard';
 import UserProfile from './pages/UserProfile';
 import Search from './pages/Search';
+import PostDetail from './pages/posts/PostDetail';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
 import { jwtDecode } from 'jwt-decode';
@@ -31,8 +32,7 @@ function App() {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/user/:username" element={<UserProfile />} />
-                {/* <Route path="/post/:id" element={<PostDetail />} /> */}
-                {/* <Route path="/create-post" element={<CreatePostPage />} /> */}
+                <Route path="/post/:id" element={<PostDetail />} />
               </Route>
 
               {/* Admin routes */}

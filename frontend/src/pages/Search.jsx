@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Post from './posts/Post';
+import PostCard from './posts/PostCard';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
@@ -8,18 +9,35 @@ import api from '../utils/api';
 function Search() {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [categories, setCategories] = useState([]);
   const [searchResults, setSearchResults] = useState({ posts: [], users: [] });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get('/categories');
+        setCategories(response.data);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Error fetching categories');
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!searchQuery) return;
+    if (!searchQuery && !selectedCategory) return;
     setLoading(true);
     setError(null);
 
     try {
-      const response = await api.get(`/search?q=${encodeURIComponent(searchQuery)}`);
+      const query = new URLSearchParams();
+      if (searchQuery) query.append('q', searchQuery);
+      if (selectedCategory) query.append('category', selectedCategory);
+      const response = await api.get(`/search?${query.toString()}`);
       setSearchResults(response.data);
       setLoading(false);
     } catch (err) {
@@ -75,8 +93,8 @@ function Search() {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <form onSubmit={handleSearch} className="mb-6">
-        <div className="flex items-center border border-theme rounded-lg bg-card">
+      <form onSubmit={handleSearch} className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="flex items-center border border-theme rounded-lg bg-card flex-1">
           <MagnifyingGlassIcon className="h-6 w-6 text-gray-500 ml-2" />
           <input
             type="text"
@@ -85,13 +103,23 @@ function Search() {
             placeholder="Search posts, users, or tags..."
             className="w-full p-2 border-none focus:ring-0 bg-card text-theme"
           />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600"
-          >
-            Search
-          </button>
         </div>
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          className="p-2 border border-theme rounded-lg bg-card text-theme"
+        >
+          <option value="">All Categories</option>
+          {categories.map(category => (
+            <option key={category._id} value={category._id}>{category.name}</option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+        >
+          Search
+        </button>
       </form>
       {error && <p className="text-red-500 text-center">{error}</p>}
       {loading ? (
@@ -125,20 +153,12 @@ function Search() {
           {searchResults.posts.length > 0 && (
             <div>
               <h3 className="text-lg font-bold text-theme mb-2">Posts</h3>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {searchResults.posts.map(post => (
-                  <Post
+                  <PostCard
                     key={post._id}
                     post={post}
-                    onLike={handleLike}
-                    onComment={handleComment}
-                    onShare={handleShare}
-                    onSave={handleSave}
-                    onReport={handleReport}
-                    isOwnPost={post.author._id.toString() === localStorage.getItem('userId')}
-                    onDelete={() => {}}
-                    onArchive={() => {}}
-                    onRestrictComments={() => {}}
+                    onClick={() => window.location.href = `/post/${post._id}`}
                   />
                 ))}
               </div>

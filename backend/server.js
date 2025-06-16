@@ -5,6 +5,7 @@ const postRoutes = require('./src/routes/posts');
 const commentRoutes = require('./src/routes/comments');
 const usersRoutes = require('./src/routes/users');
 const adminRoutes = require('./src/routes/admin');
+const categoryRoutes = require('./src/routes/category');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
@@ -28,6 +29,7 @@ app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/categories' , categoryRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

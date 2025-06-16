@@ -6,6 +6,7 @@ const User = require('../models/User');
 const Comment = require('../models/Comment');
 const Report = require('../models/Report');
 const AdminAction = require('../models/AdminAction');
+const Category = require('../models/Category');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const router = express.Router();
 const mongoose = require('mongoose');
@@ -31,14 +32,16 @@ const upload = multer({
   },
 });
 
-// In your posts.js file, inside the router.post('/') route:
-
 router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const { content, tags } = req.body;
+    const { content, tags, categoryIds } = req.body;
 
     if (!content) {
       return res.status(400).json({ message: 'Content is required' });
+    }
+
+    if (!categoryIds) {
+      return res.status(400).json({ message: 'At least one category is required' });
     }
 
     // Validate Tiptap/ProseMirror content structure
@@ -49,30 +52,23 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
       return res.status(400).json({ message: 'Invalid content format (not valid JSON)' });
     }
 
-    // Check if the parsed content is a valid Tiptap doc structure
     if (!parsedContent || parsedContent.type !== 'doc' || !Array.isArray(parsedContent.content)) {
       return res.status(400).json({ message: 'Invalid Tiptap document structure' });
     }
 
-    // Determine if the Tiptap content is truly empty (e.g., only an empty paragraph)
     let hasMeaningfulContent = false;
     if (parsedContent.content.length > 0) {
       for (const node of parsedContent.content) {
-        // If it's an image node, it definitely has content
         if (node.type === 'image' && node.attrs && node.attrs.src) {
           hasMeaningfulContent = true;
           break;
         }
-        // For text-based nodes (paragraph, heading, etc.), check if they contain non-empty text
         if (node.content && Array.isArray(node.content) && node.content.length > 0) {
           if (node.content.some(childNode => childNode.type === 'text' && childNode.text.trim().length > 0)) {
             hasMeaningfulContent = true;
             break;
           }
         }
-        // You may need to add checks for other node types (e.g., lists, code blocks)
-        // if you want them to be considered as "meaningful content" even without direct text.
-        // For example, for lists:
         if ((node.type === 'bulletList' || node.type === 'orderedList') && node.content && node.content.length > 0) {
           if (node.content.some(listItem =>
             listItem.type === 'listItem' &&
@@ -97,12 +93,32 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
       return res.status(400).json({ message: 'Post content cannot be empty' });
     }
 
-    // The rest of your post creation logic remains the same
+    // Validate categoryIds
+    let parsedCategoryIds;
+    try {
+      parsedCategoryIds = JSON.parse(categoryIds);
+      if (!Array.isArray(parsedCategoryIds) || parsedCategoryIds.length === 0) {
+        return res.status(400).json({ message: 'At least one category is required' });
+      }
+    } catch (err) {
+      return res.status(400).json({ message: 'Invalid categoryIds format' });
+    }
+
+    // Verify all categories exist and are approved
+    const validCategories = await Category.find({
+      _id: { $in: parsedCategoryIds },
+      isApproved: true,
+    });
+    if (validCategories.length !== parsedCategoryIds.length) {
+      return res.status(400).json({ message: 'One or more categories are invalid or unapproved' });
+    }
+
     const post = new Post({
       author: req.user._id,
-      content, // This will store the stringified JSON
-      image: req.file ? `/uploads/posts/${req.file.filename}` : null,
+      content,
+      image: req.file ? `/Uploads/posts/${req.file.filename}` : null,
       tags: tags ? JSON.parse(tags) : [],
+      categories: parsedCategoryIds,
       likes: [],
       comments: [],
       savedBy: [],
@@ -112,7 +128,9 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
     });
 
     await post.save();
-    const populatedPost = await Post.findById(post._id).populate('author', 'name username avatar');
+    const populatedPost = await Post.findById(post._id)
+      .populate('author', 'name username avatar')
+      .populate('categories', 'name');
     res.status(201).json({
       ...populatedPost.toJSON(),
       isLiked: false,
@@ -126,10 +144,9 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
   }
 });
 
-
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const { author, liked, saved, archived } = req.query;
+    const { author, liked, saved, archived, category } = req.query;
     let query = { isDeleted: false };
 
     if (archived !== 'true') {
@@ -152,8 +169,20 @@ router.get('/', authMiddleware, async (req, res) => {
       query._id = { $in: req.user.savedPosts };
     }
 
+    if (category) {
+      if (!mongoose.isValidObjectId(category)) {
+        return res.status(400).json({ message: 'Invalid category ID' });
+      }
+      const categoryExists = await Category.findById(category);
+      if (!categoryExists || !categoryExists.isApproved) {
+        return res.status(404).json({ message: 'Category not found or not approved' });
+      }
+      query.categories = category;
+    }
+
     const posts = await Post.find(query)
       .populate('author', 'name username avatar')
+      .populate('categories', 'name')
       .sort({ createdAt: -1 })
       .limit(20);
 
@@ -170,7 +199,6 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
-
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
@@ -179,6 +207,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
     const post = await Post.findById(req.params.id)
       .populate('author', 'name username avatar')
+      .populate('categories', 'name')
       .where({ isDeleted: false });
 
     if (!post) {
@@ -214,11 +243,13 @@ router.get('/search', authMiddleware, async (req, res) => {
       $or: [
         { content: { $regex: q, $options: 'i' } },
         { tags: { $regex: q, $options: 'i' } },
+        { categories: { $in: await Category.find({ name: { $regex: q, $options: 'i' }, isApproved: true }).select('_id') } },
       ],
       isDeleted: false,
       isArchived: false,
     })
       .populate('author', 'name username avatar')
+      .populate('categories', 'name')
       .sort({ createdAt: -1 })
       .limit(20);
 
@@ -266,7 +297,9 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
     }
 
     await post.save();
-    const updatedPost = await Post.findById(post._id).populate('author', 'name username avatar');
+    const updatedPost = await Post.findById(post._id)
+      .populate('author', 'name username avatar')
+      .populate('categories', 'name');
     res.json({
       ...updatedPost.toJSON(),
       isLiked: !isLiked,
@@ -296,7 +329,9 @@ router.post('/:id/save', authMiddleware, async (req, res) => {
     }
 
     const updatedUser = await User.findById(userId).select('-password');
-    const updatedPost = await Post.findById(post._id).populate('author', 'name username avatar');
+    const updatedPost = await Post.findById(post._id)
+      .populate('author', 'name username avatar')
+      .populate('categories', 'name');
     res.json({
       ...updatedPost.toJSON(),
       isLiked: post.likes.includes(userId),
@@ -381,7 +416,9 @@ router.post('/:id/archive', authMiddleware, async (req, res) => {
     post.isArchived = !post.isArchived;
     await post.save();
 
-    const updatedPost = await Post.findById(post._id).populate('author', 'name username avatar');
+    const updatedPost = await Post.findById(post._id)
+      .populate('author', 'name username avatar')
+      .populate('categories', 'name');
     res.json({
       ...updatedPost.toJSON(),
       isLiked: post.likes.includes(req.user._id),
@@ -410,11 +447,13 @@ router.post('/:id/restrict-comments', authMiddleware, async (req, res) => {
     post.restrictComments = !post.restrictComments;
     await post.save();
 
-    const updatedPost = await Post.findById(post._id).populate('author', 'name username avatar');
+    const updatedPost = await Post.findById(post._id)
+      .populate('author', 'name username avatar')
+      .populate('categories', 'name');
     res.json({
       ...updatedPost.toJSON(),
-      isLiked: post.likes.includes(req.user._id),
-      isSaved: req.user.savedPosts.includes(post._id),
+      isLikedPost: post.likes.includes(req.user._id),
+      isSaved: post.savedBy.includes(req.user._id),
       likes: post.likes.length,
       comments: post.comments.length,
       restrictComments: post.restrictComments,
@@ -424,7 +463,7 @@ router.post('/:id/restrict-comments', authMiddleware, async (req, res) => {
   }
 });
 
-// Image upload endpoint for Lexical editor
+// Image upload endpoint for Tiptap editor
 router.post('/upload-image', authMiddleware, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {

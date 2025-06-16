@@ -1,15 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
-import { Color } from '@tiptap/extension-color'; // Import for color extension
-import TextStyle from '@tiptap/extension-text-style'; // Import for text style extension
-import FontFamily from '@tiptap/extension-font-family'; // Import for font family extension
+import { Color } from '@tiptap/extension-color';
+import TextStyle from '@tiptap/extension-text-style';
+import FontFamily from '@tiptap/extension-font-family';
 import CreatePostModal from '../../components/CreatePostModal';
 import api from '../../utils/api';
 import EmojiPicker from 'emoji-picker-react';
-
 import {
   Bold,
   Italic,
@@ -35,14 +34,18 @@ import {
 function CreatePost({ isOpen, onClose, onPostCreated }) {
   const [error, setError] = useState(null);
   const [tags, setTags] = useState([]);
+  const [categoryIds, setCategoryIds] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [newCategory, setNewCategory] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
 
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        bulletList: { keepMarks: true, keepAttributes: false, },
-        orderedList: { keepMarks: true, keepAttributes: false, },
+        bulletList: { keepMarks: true, keepAttributes: false },
+        orderedList: { keepMarks: true, keepAttributes: false },
       }),
       Link.configure({
         openOnClick: false,
@@ -51,9 +54,9 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
       Image.configure({
         inline: true,
       }),
-      TextStyle, // Enable text styling
-      Color.configure({ types: ['textStyle'] }), // Enable color for text styles
-      FontFamily, // Enable font family selection
+      TextStyle,
+      Color.configure({ types: ['textStyle'] }),
+      FontFamily,
     ],
     content: '',
     editorProps: {
@@ -63,10 +66,23 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
     },
   });
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get('/categories');
+        setCategories(response.data);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Error fetching categories');
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
+    setLoading(true);
     const formData = new FormData();
     formData.append('image', file);
 
@@ -83,6 +99,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
     } catch (err) {
       setError(err.response?.data?.message || 'Error uploading image');
     }
+    setLoading(false);
   };
 
   const handleEmojiSelect = (emojiObject) => {
@@ -92,6 +109,30 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
     setShowEmojiPicker(false);
   };
 
+  const handleCategoryToggle = (categoryId) => {
+    setCategoryIds(prev =>
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const handleSuggestCategory = async () => {
+    if (!newCategory) {
+      setError('Please enter a category name to suggest');
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post('/categories/suggest', { name: newCategory });
+      alert('Category suggestion submitted for review');
+      setNewCategory('');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error suggesting category');
+    }
+    setLoading(false);
+  };
+
   const handleSubmit = async () => {
     if (!editor) {
       setError('Editor not initialized.');
@@ -99,18 +140,22 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
     }
 
     const plainTextContent = editor.getText().trim();
-
     if (plainTextContent.length === 0) {
       setError('Post content cannot be empty');
       return;
     }
 
-    const content = editor.getJSON();
+    if (categoryIds.length === 0) {
+      setError('At least one category is required');
+      return;
+    }
 
+    setLoading(true);
     try {
       const postData = {
-        content: JSON.stringify(content),
+        content: JSON.stringify(editor.getJSON()),
         tags: JSON.stringify(tags),
+        categoryIds: JSON.stringify(categoryIds),
       };
 
       const response = await api.post('/posts', postData, {
@@ -121,10 +166,13 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
       onPostCreated(response.data);
       editor.commands.clearContent();
       setTags([]);
+      setCategoryIds([]);
+      setNewCategory('');
       onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'Error creating post');
     }
+    setLoading(false);
   };
 
   if (!isOpen) return null;
@@ -276,8 +324,6 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
             >
               <SeparatorHorizontal className="h-5 w-5" />
             </button>
-
-            {/* New: Font Color Picker */}
             <input
               type="color"
               onInput={event => editor.chain().focus().setColor(event.target.value).run()}
@@ -285,7 +331,6 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
               className="p-1 rounded cursor-pointer w-8 h-8"
               title="Font Color"
             />
-            {/* New: Font Family Dropdown */}
             <select
               onChange={event => editor.chain().focus().setFontFamily(event.target.value).run()}
               value={editor.getAttributes('textStyle').fontFamily || ''}
@@ -303,31 +348,65 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
           </div>
         )}
         <EditorContent editor={editor} className="emojis overflow-auto" />
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-theme mb-2">Categories (select at least one)</label>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {categories.map(category => (
+              <button
+                key={category._id}
+                type="button"
+                onClick={() => handleCategoryToggle(category._id)}
+                className={`px-3 py-1 rounded-full text-sm ${categoryIds.includes(category._id) ? 'bg-blue-500 text-white' : 'bg-gray-200 text-theme hover:bg-gray-300'}`}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
+          <label className="block text-sm font-medium text-theme mb-2">Suggest a New Category</label>
+          <div className="flex gap-2 mb-4">
+            <input
+              type="text"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              placeholder="Enter new category name"
+              className="w-full p-2 border border-theme rounded bg-card text-theme"
+            />
+            <button
+              type="button"
+              onClick={handleSuggestCategory}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              disabled={loading || !newCategory}
+            >
+              Suggest
+            </button>
+          </div>
+        </div>
+        <input
+          type="text"
+          placeholder="Add tags (comma-separated)"
+          className="w-full p-2 sticky bottom-12 z-50 border border-theme rounded bg-card text-theme mt-4"
+          onChange={(e) => setTags(e.target.value.split(',').map((tag) => tag.trim()).filter((tag) => tag))}
+        />
+        {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
         {showEmojiPicker && (
           <div className="absolute top-32 left-72 z-10">
             <EmojiPicker onEmojiClick={handleEmojiSelect} />
           </div>
         )}
-        <input
-          type="text"
-          placeholder="Add tags (comma-separated)"
-          className="w-full p-2 h- sticky bottom-12 z-50 border border-theme rounded bg-card text-theme mt-4"
-          onChange={(e) => setTags(e.target.value.split(',').map((tag) => tag.trim()).filter((tag) => tag))}
-        />
-        {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-
         <div className="flex sticky bottom-0 z-50 justify-end space-x-2 mt-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200  hover:bg-gray-300  rounded text-theme"
+            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-theme"
+            disabled={loading}
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            disabled={loading}
           >
-            Post
+            {loading ? 'Posting...' : 'Post'}
           </button>
         </div>
       </div>
