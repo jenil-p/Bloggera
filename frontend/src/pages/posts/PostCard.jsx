@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { extractTextFromTiptapJSON } from '../../utils/tiptapUtils'
+import '../../index.css'
 
 export default function PostCard({ post, onClick }) {
   const previewText = extractTextFromTiptapJSON(post.content);
@@ -11,7 +12,8 @@ export default function PostCard({ post, onClick }) {
     >
       {post.image && (
         <img
-          src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${post.image}`}
+          // src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${post.image}`}
+          src={post.image}
           alt={post.title || 'Post image'}
           className="w-full h-48 object-cover rounded-t-lg"
         />
@@ -28,7 +30,7 @@ export default function PostCard({ post, onClick }) {
             <Link
               key={category._id}
               to={`/posts?category=${category._id}`}
-              className="text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors"
+              className="text-xs px-2 py-1 tag rounded-full transition-colors"
             >
               {category.name}
             </Link>

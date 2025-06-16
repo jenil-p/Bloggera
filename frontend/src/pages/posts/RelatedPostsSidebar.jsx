@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import PostCard from './PostCard';
 import api from '../../utils/api';
 
-export default function RelatedPostsSidebar({ currentPostId, categories }) {
+export default function RelatedPostsSidebar({ currentPostId, categories, tags }) {
   const [relatedPosts, setRelatedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -10,9 +10,21 @@ export default function RelatedPostsSidebar({ currentPostId, categories }) {
   useEffect(() => {
     const fetchRelatedPosts = async () => {
       try {
+        if (!categories.length && !tags.length) {
+          setRelatedPosts([]);
+          setLoading(false);
+          return;
+        }
+
         const query = new URLSearchParams();
-        query.append('category', categories.join(','));
+        if (categories.length > 0) {
+          query.append('categories', categories.join(','));
+        }
+        if (tags.length > 0) {
+          query.append('tags', tags.join(','));
+        }
         query.append('exclude', currentPostId);
+
         const response = await api.get(`/posts?${query.toString()}`);
         setRelatedPosts(response.data.slice(0, 5)); // Limit to 5 related posts
         setLoading(false);
@@ -21,12 +33,9 @@ export default function RelatedPostsSidebar({ currentPostId, categories }) {
         setLoading(false);
       }
     };
-    if (categories.length > 0) {
-      fetchRelatedPosts();
-    } else {
-      setLoading(false);
-    }
-  }, [categories, currentPostId]);
+
+    fetchRelatedPosts();
+  }, [currentPostId, categories, tags]);
 
   if (loading) {
     return <p className="text-center text-theme">Loading related posts...</p>;

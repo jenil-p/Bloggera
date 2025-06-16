@@ -4,10 +4,9 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import LinkExtension from '@tiptap/extension-link';
 import ImageExtension from '@tiptap/extension-image';
-import { Color } from '@tiptap/extension-color'; // Import for rendering colored text
-import TextStyle from '@tiptap/extension-text-style'; // Import for rendering styled text
-import FontFamily from '@tiptap/extension-font-family'; // Import for rendering font family
-
+import { Color } from '@tiptap/extension-color';
+import TextStyle from '@tiptap/extension-text-style';
+import FontFamily from '@tiptap/extension-font-family';
 import {
   HeartIcon,
   ChatBubbleOvalLeftIcon,
@@ -18,7 +17,8 @@ import { HeartIcon as HeartIconSolid, BookmarkIcon as BookmarkIconSolid } from '
 import CommentSection from '../../components/CommentSection';
 import ErrorBoundary from '../../components/ErrorBoundary';
 import api from '../../utils/api';
-import './LexicalEditor.css'; // Renamed from LexicalEditor.css to editor.css in the future
+import './LexicalEditor.css';
+import '../../index.css'
 
 function Post({
   post,
@@ -43,8 +43,8 @@ function Post({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        bulletList: { keepMarks: true, keepAttributes: false, },
-        orderedList: { keepMarks: true, keepAttributes: false, },
+        bulletList: { keepMarks: true, keepAttributes: false },
+        orderedList: { keepMarks: true, keepAttributes: false },
       }),
       LinkExtension.configure({
         openOnClick: true,
@@ -54,7 +54,7 @@ function Post({
       Color,
       FontFamily,
     ],
-    content: post.content ? JSON.parse(post.content) : '',
+    content: post.content ? JSON.parse(post.content) || '' : '',
     editable: false,
     editorProps: {
       attributes: {
@@ -101,7 +101,7 @@ function Post({
       setShowReportModal(false);
       setReportReason('');
       setReportMessage('');
-      alert('Post reported');
+      alert('Post reported successfully');
     } catch (err) {
       setError(err.response?.data?.message || 'Error reporting post');
     }
@@ -138,6 +138,16 @@ function Post({
     }
   };
 
+  const handleBlockUser = async () => {
+    try {
+      await api.post(`/users/block/${post.author._id}`);
+      alert(`User ${post.author.username} blocked`);
+      setShowMenu(false);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error blocking user');
+    }
+  };
+
   return (
     <div className="bg-card shadow-md rounded-lg p-4 mb-4 border border-theme">
       {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
@@ -149,50 +159,76 @@ function Post({
             className="h-10 w-10 rounded-full mr-3 object-cover"
           />
           <div>
-            <p className="font-bold text-theme">{post.author.name}</p>
+            <p className="font-bold text-theme">{post.author?.name || 'Anonymous'}</p>
             <p className="text-sm text-gray-500">@{post.author.username}</p>
           </div>
         </Link>
-        {isOwnPost && (
-          <div className="relative">
-            <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-full hover:bg-[#ffffff] text-theme">
-              <EllipsisHorizontalIcon className="h-6 w-6" />
-            </button>
-            {showMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-card border border-theme rounded-md shadow-lg z-10">
-                <button
-                  onClick={handleDelete}
-                  className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-[#ffffff]"
-                >
-                  Delete Post
-                </button>
-                <button
-                  onClick={handleArchive}
-                  className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#ffffff]"
-                >
-                  {post.isArchived ? 'Unarchive Post' : 'Archive Post'}
-                </button>
-                <button
-                  onClick={handleRestrictComments}
-                  className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#ffffff]"
-                >
-                  {post.restrictComments ? 'Allow Comments' : 'Restrict Comments'}
-                </button>
-                <button
-                  onClick={handleCopyLink}
-                  className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#ffffff]"
-                >
-                  Copy Link
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-        {!isOwnPost && (
-          <button onClick={() => setShowReportModal(true)} className="text-sm text-red-500 hover:underline">
-            Report
+        <div className="relative">
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-theme"
+          >
+            <EllipsisHorizontalIcon className="h-6 w-6" />
           </button>
-        )}
+          {showMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-card border border-theme rounded-lg shadow-lg z-50">
+              <div className="py-1">
+                {isOwnPost ? (
+                  <>
+                    <button
+                      onClick={handleDelete}
+                      className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Delete Post
+                    </button>
+                    <button
+                      onClick={handleArchive}
+                      className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      {post.isArchived ? 'Unarchive Post' : 'Archive Post'}
+                    </button>
+                    <button
+                      onClick={handleRestrictComments}
+                      className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      {post.restrictComments ? 'Allow Comments' : 'Restrict Comments'}
+                    </button>
+                    <button
+                      onClick={handleCopyLink}
+                      className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Copy Link
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setShowReportModal(true);
+                        setShowMenu(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Report
+                    </button>
+                    <button
+                      onClick={handleBlockUser}
+                      className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Block User
+                    </button>
+                    <button
+                      onClick={handleCopyLink}
+                      className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Copy Link
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="post-content text-theme mb-4 custom-scrollbar">
@@ -203,14 +239,22 @@ function Post({
 
       {post.image && (
         <div className="mb-4">
-          <img src={post.image} alt="Post image" className="rounded-lg border border-green-700 object-cover" />
+          <img
+            // src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${post.image}`}
+            src={post.image}
+            alt="Post image"
+            className="rounded-lg border border-theme object-cover w-full"
+          />
         </div>
       )}
 
       {post.tags && post.tags.length > 0 && (
         <div className="mb-4">
           {post.tags.map((tag, index) => (
-            <span key={index} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-2 mb-2">
+            <span
+              key={index}
+              className="inline-block tag text-xs px-2 py-1 rounded-full mr-2 mb-2"
+            >
               #{tag}
             </span>
           ))}
@@ -218,7 +262,7 @@ function Post({
       )}
 
       <div className="flex items-center justify-between text-gray-500 text-sm mb-4">
-        <span>{new Date(post.createdAt).toLocaleString()}</span>
+        <span>{new Date(post.createdAt).toLocaleDateString()}</span>
         <div className="flex space-x-4">
           <button onClick={handleLike} className="flex items-center space-x-1">
             {isLiked ? <HeartIconSolid className="h-5 w-5 text-red-500" /> : <HeartIcon className="h-5 w-5" />}
@@ -230,6 +274,7 @@ function Post({
           </button>
           <button onClick={handleSave} className="flex items-center space-x-1">
             {isSaved ? <BookmarkIconSolid className="h-5 w-5 text-blue-500" /> : <BookmarkIcon className="h-5 w-5" />}
+            <span>{isSaved ? 'Saved' : 'Save'}</span>
           </button>
         </div>
       </div>
@@ -239,7 +284,7 @@ function Post({
           <div className="bg-card p-6 rounded-lg max-w-md w-full shadow-lg border border-theme">
             <h3 className="text-lg font-bold mb-4 text-theme">Report Post</h3>
             <div className="mb-4">
-              <label htmlFor="reason" className="block text-sm font-medium text-theme mb-2">Reason</label>
+              <label htmlFor="reason" className="block text-sm font-medium mb-1 text-theme">Reason</label>
               <select
                 id="reason"
                 value={reportReason}
@@ -294,7 +339,7 @@ function Post({
             />
             <button
               onClick={() => setShowCommentModal(false)}
-              className="mt-4 px-4 py-2 bg-[#3b3b3b43] rounded w-full text-theme hover:bg-[#5a5a5a43]"
+              className="mt-4 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded w-full text-theme"
             >
               Close
             </button>

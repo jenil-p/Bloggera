@@ -5,6 +5,8 @@
   --text-color: #000000;
   --text-red : #ff0000b5;
   --background-red : #f292924d;
+  --tag-bg: #dce6f2;
+  --tag-text: #4b76e1;
   --text-green : #154e1a;
   --background-green : #00800038;
   --text-yellow : #494e15;
@@ -26,6 +28,8 @@
 [data-theme="dark"] {
   --bg-color: #000000;
   --text-color: #ffffff;
+  --tag-bg: #dbe9fc24;
+  --tag-text: #7897ea;
   --text-red : #7e1515;
   --background-red: #f2a7a7c2;
   --text-green : #0c992b;
@@ -34,14 +38,14 @@
   --background-yellow: #f3ff4c2b;
   --text-purple : #610c99;
   --background-purple: #974cff2b;
-  --card-bg: #000000;
+  --card-bg: #dedede14;
   --border-color: #374151;
   --hover-bg: #374151;
   --gradient-from: #3b82f6;
   --gradient-to: #a855f7;
   --border-color: #747070;
   --bg-icon : #bdbcbc1a;
-   --green-600: #22c55e;
+  --green-600: #22c55e;
   --green-700: #16a34a;
   --indigo-500: #818cf8;
 }
@@ -93,6 +97,11 @@ body {
 
 .border-theme {
   border-color: var(--border-color);
+}
+
+.tag{
+  background-color: var(--tag-bg);
+  color: var(--tag-text);
 }
 
 .hover-bg-theme:hover {

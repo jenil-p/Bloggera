@@ -85,7 +85,8 @@ function PostDetail() {
       <div className="w-1/4 pl-4 hidden lg:block">
         <RelatedPostsSidebar
           currentPostId={id}
-          categories={post.categoryIds || []}
+          categories={post.categories?.map(cat => cat._id) || []}
+          tags={post.tags || []}
         />
       </div>
     </div>

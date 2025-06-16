@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import PostCard from './posts/PostCard';
 import CreatePost from './posts/CreatePost';
-import CategorySidebar from './posts/CategorySidebar';
+import CategorySidebar from './posts/CategorySidebar'
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
 
 function Home() {
   const { theme } = useTheme();
+  const [searchParams] = useSearchParams();
   const [posts, setPosts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
@@ -17,8 +19,11 @@ function Home() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const query = new URLSearchParams();
+        if (selectedCategory) query.append('category', selectedCategory);
+        if (searchParams.get('tag')) query.append('tag', searchParams.get('tag'));
         const [postsRes, categoriesRes] = await Promise.all([
-          api.get(selectedCategory ? `/posts?category=${selectedCategory}` : '/posts'),
+          api.get(`/posts?${query.toString()}`),
           api.get('/categories'),
         ]);
         setPosts(postsRes.data);
@@ -30,7 +35,7 @@ function Home() {
       }
     };
     fetchData();
-  }, [selectedCategory]);
+  }, [selectedCategory, searchParams]);
 
   const handleCreatePost = (newPost) => {
     setPosts([newPost, ...posts]);
@@ -39,7 +44,6 @@ function Home() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 flex">
-      {/* Left Sidebar: Categories */}
       <div className="w-1/4 pr-4 hidden md:block">
         <CategorySidebar
           categories={categories}
@@ -47,8 +51,6 @@ function Home() {
           onSelectCategory={setSelectedCategory}
         />
       </div>
-
-      {/* Main Content */}
       <div className="flex-1">
         <button
           onClick={() => setShowCreatePostModal(true)}

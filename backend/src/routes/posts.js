@@ -146,7 +146,12 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
 
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const { author, liked, saved, archived, category } = req.query;
+    const { author, liked, saved, archived, category, categories, tags, tag, exclude } = req.query;
+    const user = await User.findById(req.user._id).select('likedPosts savedPosts');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     let query = { isDeleted: false };
 
     if (archived !== 'true') {
@@ -162,11 +167,11 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 
     if (liked) {
-      query._id = { $in: req.user.likedPosts };
+      query._id = { $in: user.likedPosts };
     }
 
     if (saved) {
-      query._id = { $in: req.user.savedPosts };
+      query._id = { $in: user.savedPosts };
     }
 
     if (category) {
@@ -180,16 +185,47 @@ router.get('/', authMiddleware, async (req, res) => {
       query.categories = category;
     }
 
+    if (categories || tags || tag) {
+      const orConditions = [];
+      if (categories) {
+        const categoryArray = categories.split(',').filter(id => mongoose.isValidObjectId(id));
+        if (categoryArray.length === 0) {
+          return res.status(400).json({ message: 'Invalid category IDs' });
+        }
+        const validCategories = await Category.find({
+          _id: { $in: categoryArray },
+          isApproved: true,
+        });
+        if (validCategories.length !== categoryArray.length) {
+          return res.status(400).json({ message: 'One or more categories are invalid or unapproved' });
+        }
+        orConditions.push({ categories: { $in: categoryArray } });
+      }
+      if (tags) {
+        const tagArray = tags.split(',');
+        orConditions.push({ tags: { $in: tagArray } });
+      }
+      if (tag) {
+        orConditions.push({ tags: tag });
+      }
+      if (orConditions.length > 0) {
+        query.$or = orConditions;
+      }
+    }
+
+    if (exclude && mongoose.isValidObjectId(exclude)) {
+      query._id = { $ne: exclude };
+    }
+
     const posts = await Post.find(query)
       .populate('author', 'name username avatar')
       .populate('categories', 'name')
-      .sort({ createdAt: -1 })
-      .limit(20);
+      .sort({ createdAt: -1 });
 
     res.json(posts.map(post => ({
       ...post.toJSON(),
       isLiked: post.likes.includes(req.user._id),
-      isSaved: req.user.savedPosts.includes(post._id),
+      isSaved: user.savedPosts.includes(post._id),
       likes: post.likes.length,
       comments: post.comments.length,
     })));
@@ -251,7 +287,7 @@ router.get('/search', authMiddleware, async (req, res) => {
       .populate('author', 'name username avatar')
       .populate('categories', 'name')
       .sort({ createdAt: -1 })
-      .limit(20);
+      // .limit(20);
 
     const users = await User.find({
       $or: [
@@ -261,7 +297,7 @@ router.get('/search', authMiddleware, async (req, res) => {
       isSuspended: false,
     })
       .select('name username avatar')
-      .limit(20);
+      // .limit(20);
 
     res.json({
       posts: posts.map(post => ({
@@ -474,6 +510,33 @@ router.post('/upload-image', authMiddleware, upload.single('image'), async (req,
   } catch (error) {
     console.error('Error uploading image:', error.stack);
     res.status(500).json({ message: 'Error uploading image', error: error.message });
+  }
+});
+
+// Share the blog
+router.post('/:id/share', authMiddleware, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post || post.isDeleted || post.isArchived) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+    if (!post.shares.includes(req.user._id)) {
+      post.shares.push(req.user._id);
+      await post.save();
+    }
+    const updatedPost = await Post.findById(post._id)
+      .populate('author', 'name username avatar')
+      .populate('categories', 'name');
+    res.json({
+      ...updatedPost.toJSON(),
+      isLiked: post.likes.includes(req.user._id),
+      isSaved: post.savedBy.includes(req.user._id),
+      likes: post.likes.length,
+      comments: post.comments.length,
+      shares: post.shares.length,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error sharing post', error: error.message });
   }
 });
 
