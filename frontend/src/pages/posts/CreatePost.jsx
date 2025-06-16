@@ -8,6 +8,7 @@ import TextStyle from '@tiptap/extension-text-style';
 import FontFamily from '@tiptap/extension-font-family';
 import CreatePostModal from '../../components/CreatePostModal';
 import api from '../../utils/api';
+import '../../index.css'
 import EmojiPicker from 'emoji-picker-react';
 import {
   Bold,
@@ -181,7 +182,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
     <CreatePostModal isOpen={isOpen} onClose={onClose} title="Create New Post">
       <div className="p-4 h-full rounded-lg shadow-lg">
         {editor && (
-          <div className="toolbar sticky top-0 z-50 flex flex-wrap space-x-1 p-2 bg-card border-b border-theme rounded-t-lg">
+          <div className="toolbar z-50 flex flex-wrap space-x-1 p-2 bg-card border-b border-theme rounded-t-lg">
             <button
               onClick={() => editor.chain().focus().toggleBold().run()}
               className={`p-1 rounded ${editor.isActive('bold') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-theme'}`}
@@ -356,7 +357,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
                 key={category._id}
                 type="button"
                 onClick={() => handleCategoryToggle(category._id)}
-                className={`px-3 py-1 rounded-full text-sm ${categoryIds.includes(category._id) ? 'bg-blue-500 text-white' : 'bg-gray-200 text-theme hover:bg-gray-300'}`}
+                className={`px-3 py-1 rounded-full text-sm ${categoryIds.includes(category._id) ? 'bg-blue-500 text-white' : 'tag'}`}
               >
                 {category.name}
               </button>
@@ -384,7 +385,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
         <input
           type="text"
           placeholder="Add tags (comma-separated)"
-          className="w-full p-2 sticky bottom-12 z-50 border border-theme rounded bg-card text-theme mt-4"
+          className="w-full p-2 z-50 border border-theme rounded bg-card text-theme mt-4"
           onChange={(e) => setTags(e.target.value.split(',').map((tag) => tag.trim()).filter((tag) => tag))}
         />
         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
@@ -393,10 +394,10 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
             <EmojiPicker onEmojiClick={handleEmojiSelect} />
           </div>
         )}
-        <div className="flex sticky bottom-0 z-50 justify-end space-x-2 mt-4">
+        <div className="flex z-50 justify-end space-x-2 mt-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-theme"
+            className="px-4 py-2 cancel-button rounded"
             disabled={loading}
           >
             Cancel
