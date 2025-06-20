@@ -8,6 +8,7 @@ import Profile from './pages/Profile';
 import Dashboard from './pages/admin/Dashboard';
 import UserProfile from './pages/UserProfile';
 import Search from './pages/Search';
+import Posts from './pages/posts/Posts';
 import PostDetail from './pages/posts/PostDetail';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
@@ -31,6 +32,7 @@ function App() {
                 <Route path="/home" element={<Home />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/search" element={<Search />} />
+                <Route path="/posts" element={<Posts />} /> {/* Add Posts route */}
                 <Route path="/user/:username" element={<UserProfile />} />
                 <Route path="/post/:id" element={<PostDetail />} />
               </Route>
