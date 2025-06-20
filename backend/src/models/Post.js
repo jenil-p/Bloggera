@@ -6,6 +6,7 @@ const postSchema = new mongoose.Schema({
   image: { type: String, default: null },
   tags: [{ type: String, trim: true }],
   categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true }],
+  suggestedCategories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   comments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Comment' }],
   savedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

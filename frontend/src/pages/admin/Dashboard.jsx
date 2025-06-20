@@ -7,7 +7,7 @@ import PostsSection from './components/PostsSection';
 import CategoriesSection from './components/CategoriesSection';
 import StatsCard from './components/StatsCard';
 import ActionModal from './components/ActionModal';
-import '../../index.css'
+import '../../index.css';
 
 function Dashboard() {
   const [data, setData] = useState({
@@ -15,6 +15,7 @@ function Dashboard() {
     users: [],
     posts: [],
     categories: [],
+    suggestedCategories: [],
     stats: {
       totalUsers: 0,
       activeUsers: 0,
@@ -22,7 +23,8 @@ function Dashboard() {
       totalPosts: 0,
       reportedPosts: 0,
       totalCategories: 0,
-    }
+      totalSuggestedCategories: 0,
+    },
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,11 +35,12 @@ function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [reportsRes, usersRes, postsRes, categoriesRes] = await Promise.all([
+        const [reportsRes, usersRes, postsRes, categoriesRes, suggestedCategoriesRes] = await Promise.all([
           api.get('/admin/reports'),
           api.get('/admin/users'),
           api.get('/posts'),
           api.get('/categories'),
+          api.get('/categories/suggested'),
         ]);
 
         const activeUsers = usersRes.data.filter(u => !u.isSuspended).length;
@@ -48,6 +51,7 @@ function Dashboard() {
           users: usersRes.data,
           posts: postsRes.data,
           categories: categoriesRes.data,
+          suggestedCategories: suggestedCategoriesRes.data,
           stats: {
             totalUsers: usersRes.data.length,
             activeUsers,
@@ -55,7 +59,8 @@ function Dashboard() {
             totalPosts: postsRes.data.length,
             reportedPosts: reportsRes.data.length,
             totalCategories: categoriesRes.data.length,
-          }
+            totalSuggestedCategories: suggestedCategoriesRes.data.length,
+          },
         });
         setLoading(false);
       } catch (err) {
@@ -82,8 +87,8 @@ function Dashboard() {
             stats: {
               ...prev.stats,
               totalPosts: prev.stats.totalPosts - 1,
-              reportedPosts: prev.reports.filter(r => r.post?._id !== targetId).length
-            }
+              reportedPosts: prev.reports.filter(r => r.post?._id !== targetId).length,
+            },
           }));
           break;
         case 'block_user':
@@ -96,8 +101,8 @@ function Dashboard() {
             stats: {
               ...prev.stats,
               activeUsers: prev.stats.activeUsers - 1,
-              suspendedUsers: prev.stats.suspendedUsers + 1
-            }
+              suspendedUsers: prev.stats.suspendedUsers + 1,
+            },
           }));
           break;
         case 'suspend_user':
@@ -108,14 +113,14 @@ function Dashboard() {
               user._id === targetId ? {
                 ...user,
                 isSuspended: true,
-                suspendedUntil: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000)
+                suspendedUntil: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000),
               } : user
             ),
             stats: {
               ...prev.stats,
               activeUsers: prev.stats.activeUsers - 1,
-              suspendedUsers: prev.stats.suspendedUsers + 1
-            }
+              suspendedUsers: prev.stats.suspendedUsers + 1,
+            },
           }));
           break;
         case 'unsuspend_user':
@@ -126,14 +131,14 @@ function Dashboard() {
               user._id === targetId ? {
                 ...user,
                 isSuspended: false,
-                suspendedUntil: null
+                suspendedUntil: null,
               } : user
             ),
             stats: {
               ...prev.stats,
               activeUsers: prev.stats.activeUsers + 1,
-              suspendedUsers: prev.stats.suspendedUsers - 1
-            }
+              suspendedUsers: prev.stats.suspendedUsers - 1,
+            },
           }));
           break;
         case 'resolve_report':
@@ -147,8 +152,8 @@ function Dashboard() {
               stats: {
                 ...prev.stats,
                 totalPosts: prev.posts.filter(p => p._id !== report.post._id).length,
-                reportedPosts: prev.reports.filter(r => r._id !== targetId).length
-              }
+                reportedPosts: prev.reports.filter(r => r._id !== targetId).length,
+              },
             }));
           } else {
             setData(prev => ({
@@ -156,8 +161,8 @@ function Dashboard() {
               reports: prev.reports.filter(r => r._id !== targetId),
               stats: {
                 ...prev.stats,
-                reportedPosts: prev.reports.filter(r => r._id !== targetId).length
-              }
+                reportedPosts: prev.reports.filter(r => r._id !== targetId).length,
+              },
             }));
           }
           break;
@@ -168,30 +173,43 @@ function Dashboard() {
             reports: prev.reports.filter(r => r._id !== targetId),
             stats: {
               ...prev.stats,
-              reportedPosts: prev.reports.filter(r => r._id !== targetId).length
-            }
+              reportedPosts: prev.reports.filter(r => r._id !== targetId).length,
+            },
           }));
           break;
         case 'create_category':
-          response = await api.post('/admin/categories', { name: reason }); // Using 'reason' as category name
+          response = await api.post('/categories', { name: reason });
           setData(prev => ({
             ...prev,
-            categories: [...prev.categories, response.data],
+            categories: [...prev.categories, response.data.category],
             stats: {
               ...prev.stats,
-              totalCategories: prev.stats.totalCategories + 1
-            }
+              totalCategories: prev.stats.totalCategories + 1,
+            },
           }));
           break;
-        case 'delete_category':
-          await api.delete(`/admin/categories/${targetId}`);
+        case 'approve_category':
+          await api.post(`/categories/approve/${targetId}`);
           setData(prev => ({
             ...prev,
-            categories: prev.categories.filter(category => category._id !== targetId),
+            suggestedCategories: prev.suggestedCategories.filter(category => category._id !== targetId),
+            categories: [...prev.categories, prev.suggestedCategories.find(category => category._id === targetId)],
             stats: {
               ...prev.stats,
-              totalCategories: prev.stats.totalCategories - 1
-            }
+              totalCategories: prev.stats.totalCategories + 1,
+              totalSuggestedCategories: prev.stats.totalSuggestedCategories - 1,
+            },
+          }));
+          break;
+        case 'reject_category':
+          await api.post(`/categories/reject/${targetId}`);
+          setData(prev => ({
+            ...prev,
+            suggestedCategories: prev.suggestedCategories.filter(category => category._id !== targetId),
+            stats: {
+              ...prev.stats,
+              totalSuggestedCategories: prev.stats.totalSuggestedCategories - 1,
+            },
           }));
           break;
         default:
@@ -227,7 +245,7 @@ function Dashboard() {
 
       {/* Stats Overview */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-6 mb-8">
           <StatsCard
             title="Total Users"
             value={data.stats.totalUsers}
@@ -270,41 +288,48 @@ function Dashboard() {
             trend="up"
             change="New this week"
           />
+          <StatsCard
+            title="Suggested Categories"
+            value={data.stats.totalSuggestedCategories}
+            icon="💡"
+            trend="up"
+            change="New this week"
+          />
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-100 dark:bg-red-900/30 rounded-lg text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700">
+          <div className="mb-6 p-4 bg-red-100 rounded-lg text-red-700 border border-red-200">
             {error}
           </div>
         )}
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+        <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
             <button
               onClick={() => setActiveTab('reports')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'reports' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-theme hover:border-gray-300 dark:hover:border-gray-600'}`}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'reports' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-theme hover:border-gray-300'}`}
             >
               Reports ({data.reports.length})
             </button>
             <button
               onClick={() => setActiveTab('users')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'users' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-theme hover:border-gray-300 dark:hover:border-gray-600'}`}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'users' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-theme hover:border-gray-300'}`}
             >
               Users ({data.users.length})
             </button>
             <button
               onClick={() => setActiveTab('posts')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'posts' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-theme hover:border-gray-300 dark:hover:border-gray-600'}`}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'posts' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-theme hover:border-gray-300'}`}
             >
               Posts ({data.posts.length})
             </button>
             <button
               onClick={() => setActiveTab('categories')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'categories' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-theme hover:border-gray-300 dark:hover:border-gray-600'}`}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'categories' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-theme hover:border-gray-300'}`}
             >
-              Categories ({data.stats.totalCategories})
+              Categories ({data.stats.totalCategories + data.stats.totalSuggestedCategories})
             </button>
           </nav>
         </div>
@@ -333,6 +358,7 @@ function Dashboard() {
           {activeTab === 'categories' && (
             <CategoriesSection
               categories={data.categories}
+              suggestedCategories={data.suggestedCategories}
               onActionClick={setShowActionModal}
             />
           )}

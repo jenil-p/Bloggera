@@ -34,14 +34,14 @@ const upload = multer({
 
 router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const { content, tags, categoryIds } = req.body;
+    const { content, tags, categoryIds, suggestedCategoryIds } = req.body;
 
     if (!content) {
       return res.status(400).json({ message: 'Content is required' });
     }
 
     if (!categoryIds) {
-      return res.status(400).json({ message: 'At least one category is required' });
+      return res.status(400).json({ message: 'At least one approved category is required' });
     }
 
     // Validate Tiptap/ProseMirror content structure
@@ -93,24 +93,44 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
       return res.status(400).json({ message: 'Post content cannot be empty' });
     }
 
-    // Validate categoryIds
+    // Validate approved categoryIds
     let parsedCategoryIds;
     try {
       parsedCategoryIds = JSON.parse(categoryIds);
       if (!Array.isArray(parsedCategoryIds) || parsedCategoryIds.length === 0) {
-        return res.status(400).json({ message: 'At least one category is required' });
+        return res.status(400).json({ message: 'At least one approved category is required' });
       }
     } catch (err) {
       return res.status(400).json({ message: 'Invalid categoryIds format' });
     }
 
-    // Verify all categories exist and are approved
+    // Verify all approved categories exist and are approved
     const validCategories = await Category.find({
       _id: { $in: parsedCategoryIds },
       isApproved: true,
     });
     if (validCategories.length !== parsedCategoryIds.length) {
-      return res.status(400).json({ message: 'One or more categories are invalid or unapproved' });
+      return res.status(400).json({ message: 'One or more approved categories are invalid or unapproved' });
+    }
+
+    // Validate suggested categoryIds (optional)
+    let parsedSuggestedCategoryIds = [];
+    if (suggestedCategoryIds) {
+      try {
+        parsedSuggestedCategoryIds = JSON.parse(suggestedCategoryIds);
+        if (!Array.isArray(parsedSuggestedCategoryIds)) {
+          return res.status(400).json({ message: 'Invalid suggestedCategoryIds format' });
+        }
+        // Verify suggested categories exist (can be unapproved)
+        const validSuggestedCategories = await Category.find({
+          _id: { $in: parsedSuggestedCategoryIds },
+        });
+        if (validSuggestedCategories.length !== parsedSuggestedCategoryIds.length) {
+          return res.status(400).json({ message: 'One or more suggested categories are invalid' });
+        }
+      } catch (err) {
+        return res.status(400).json({ message: 'Invalid suggestedCategoryIds format' });
+      }
     }
 
     const post = new Post({
@@ -119,6 +139,7 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
       image: req.file ? `/Uploads/posts/${req.file.filename}` : null,
       tags: tags ? JSON.parse(tags) : [],
       categories: parsedCategoryIds,
+      suggestedCategories: parsedSuggestedCategoryIds,
       likes: [],
       comments: [],
       savedBy: [],
@@ -130,7 +151,8 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
     await post.save();
     const populatedPost = await Post.findById(post._id)
       .populate('author', 'name username avatar')
-      .populate('categories', 'name');
+      .populate('categories', 'name')
+      .populate('suggestedCategories', 'name');
     res.status(201).json({
       ...populatedPost.toJSON(),
       isLiked: false,
@@ -147,7 +169,7 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const { author, liked, saved, archived, category, categories, tags, tag, exclude } = req.query;
-    const user = await User.findById(req.user._id).select('likedPosts savedPosts');
+    const user = await User.findById(req.user._id).select('likedPosts savedPosts blockedUsers');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -158,12 +180,15 @@ router.get('/', authMiddleware, async (req, res) => {
       query.isArchived = false;
     }
 
+    // Exclude posts from blocked users
+    query.author = { $nin: user.blockedUsers || [] };
+
     if (author === 'me') {
       query.author = req.user._id;
     } else if (author) {
-      const user = await User.findOne({ username: author });
-      if (!user) return res.status(404).json({ message: 'User not found' });
-      query.author = user._id;
+      const targetUser = await User.findOne({ username: author });
+      if (!targetUser) return res.status(404).json({ message: 'User not found' });
+      query.author = targetUser._id;
     }
 
     if (liked) {
@@ -220,6 +245,7 @@ router.get('/', authMiddleware, async (req, res) => {
     const posts = await Post.find(query)
       .populate('author', 'name username avatar')
       .populate('categories', 'name')
+      .populate('suggestedCategories', 'name')
       .sort({ createdAt: -1 });
 
     res.json(posts.map(post => ({
@@ -287,7 +313,7 @@ router.get('/search', authMiddleware, async (req, res) => {
       .populate('author', 'name username avatar')
       .populate('categories', 'name')
       .sort({ createdAt: -1 })
-      // .limit(20);
+    // .limit(20);
 
     const users = await User.find({
       $or: [
@@ -297,7 +323,7 @@ router.get('/search', authMiddleware, async (req, res) => {
       isSuspended: false,
     })
       .select('name username avatar')
-      // .limit(20);
+    // .limit(20);
 
     res.json({
       posts: posts.map(post => ({

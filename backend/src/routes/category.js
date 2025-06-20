@@ -1,6 +1,7 @@
 const express = require('express');
 const Category = require('../models/Category');
 const AdminAction = require('../models/AdminAction');
+const Post = require('../models/Post');
 const { authMiddleware, adminMiddleware } = require('../middleware/authMiddleware');
 const router = express.Router();
 
@@ -35,7 +36,7 @@ router.post('/suggest', authMiddleware, async (req, res) => {
     });
 
     await category.save();
-    res.status(201).json({ message: 'Category suggestion submitted successfully' });
+    res.status(201).json({ message: 'Category suggestion submitted successfully', category });
   } catch (error) {
     console.error('Error suggesting category:', error.stack);
     res.status(500).json({ message: 'Error suggesting category', error: error.message });
@@ -58,7 +59,6 @@ router.get('/suggested', adminMiddleware, async (req, res) => {
 // Approve a suggested category (admin only)
 router.post('/approve/:id', adminMiddleware, async (req, res) => {
   try {
-    const { reason } = req.body;
     const category = await Category.findById(req.params.id);
     if (!category) {
       return res.status(404).json({ message: 'Category not found' });
@@ -66,18 +66,21 @@ router.post('/approve/:id', adminMiddleware, async (req, res) => {
     if (category.isApproved) {
       return res.status(400).json({ message: 'Category already approved' });
     }
-    if (!reason) {
-      return res.status(400).json({ message: 'Reason is required' });
-    }
 
     category.isApproved = true;
     await category.save();
+
+    // Move category from suggestedCategories to categories in posts
+    await Post.updateMany(
+      { suggestedCategories: category._id },
+      { $addToSet: { categories: category._id }, $pull: { suggestedCategories: category._id } }
+    );
 
     await AdminAction.create({
       admin: req.user._id,
       actionType: 'approve_category',
       targetUser: category.suggestedBy,
-      reason,
+      reason: 'Category approved',
       details: `Approved category: ${category.name}`,
     });
 
@@ -91,7 +94,6 @@ router.post('/approve/:id', adminMiddleware, async (req, res) => {
 // Reject a suggested category (admin only)
 router.post('/reject/:id', adminMiddleware, async (req, res) => {
   try {
-    const { reason } = req.body;
     const category = await Category.findById(req.params.id);
     if (!category) {
       return res.status(404).json({ message: 'Category not found' });
@@ -99,17 +101,31 @@ router.post('/reject/:id', adminMiddleware, async (req, res) => {
     if (category.isApproved) {
       return res.status(400).json({ message: 'Category already approved' });
     }
-    if (!reason) {
-      return res.status(400).json({ message: 'Reason is required' });
+
+    // Find or create a default "General" category
+    let defaultCategory = await Category.findOne({ name: 'General', isApproved: true });
+    if (!defaultCategory) {
+      defaultCategory = new Category({
+        name: 'General',
+        isApproved: true,
+        suggestedBy: null,
+      });
+      await defaultCategory.save();
     }
 
-    await category.remove();
+    // Reassign posts with this suggested category to the default category
+    await Post.updateMany(
+      { suggestedCategories: category._id },
+      { $addToSet: { categories: defaultCategory._id }, $pull: { suggestedCategories: category._id } }
+    );
+
+    await category.deleteOne();
 
     await AdminAction.create({
       admin: req.user._id,
       actionType: 'reject_category',
       targetUser: category.suggestedBy,
-      reason,
+      reason: 'Category rejected',
       details: `Rejected category: ${category.name}`,
     });
 
@@ -117,6 +133,41 @@ router.post('/reject/:id', adminMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Error rejecting category:', error.stack);
     res.status(500).json({ message: 'Error rejecting category', error: error.message });
+  }
+});
+
+// Create a new category (admin only)
+router.post('/', adminMiddleware, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ message: 'Category name is required' });
+    }
+
+    const existingCategory = await Category.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
+    if (existingCategory) {
+      return res.status(400).json({ message: 'Category already exists' });
+    }
+
+    const category = new Category({
+      name,
+      isApproved: true,
+      suggestedBy: null,
+    });
+
+    await category.save();
+
+    await AdminAction.create({
+      admin: req.user._id,
+      actionType: 'approve_category',
+      reason: 'Category created by admin',
+      details: `Created category: ${category.name}`,
+    });
+
+    res.status(201).json({ message: 'Category created successfully', category });
+  } catch (error) {
+    console.error('Error creating category:', error.stack);
+    res.status(500).json({ message: 'Error creating category', error: error.message });
   }
 });
 

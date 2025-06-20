@@ -8,7 +8,7 @@ import TextStyle from '@tiptap/extension-text-style';
 import FontFamily from '@tiptap/extension-font-family';
 import CreatePostModal from '../../components/CreatePostModal';
 import api from '../../utils/api';
-import '../../index.css'
+import '../../index.css';
 import EmojiPicker from 'emoji-picker-react';
 import {
   Bold,
@@ -36,8 +36,8 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
   const [error, setError] = useState(null);
   const [tags, setTags] = useState([]);
   const [categoryIds, setCategoryIds] = useState([]);
+  const [suggestedCategory, setSuggestedCategory] = useState('');
   const [categories, setCategories] = useState([]);
-  const [newCategory, setNewCategory] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
@@ -62,7 +62,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
     content: '',
     editorProps: {
       attributes: {
-        class: 'prose dark:prose-invert max-w-none focus:outline-none p-4 border border-theme rounded md:h-96 max-sm:h-96 text-theme overflow-auto',
+        class: 'prose max-w-none focus:outline-none p-4 border border-theme rounded md:h-96 max-sm:h-96 text-theme overflow-auto',
       },
     },
   });
@@ -119,15 +119,16 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
   };
 
   const handleSuggestCategory = async () => {
-    if (!newCategory) {
+    if (!suggestedCategory) {
       setError('Please enter a category name to suggest');
       return;
     }
     setLoading(true);
     try {
-      await api.post('/categories/suggest', { name: newCategory });
+      const response = await api.post('/categories/suggest', { name: suggestedCategory });
+      setCategories(prev => [...prev, response.data.category]);
+      setSuggestedCategory('');
       alert('Category suggestion submitted for review');
-      setNewCategory('');
     } catch (err) {
       setError(err.response?.data?.message || 'Error suggesting category');
     }
@@ -147,7 +148,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
     }
 
     if (categoryIds.length === 0) {
-      setError('At least one category is required');
+      setError('At least one approved category is required');
       return;
     }
 
@@ -157,6 +158,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
         content: JSON.stringify(editor.getJSON()),
         tags: JSON.stringify(tags),
         categoryIds: JSON.stringify(categoryIds),
+        suggestedCategoryIds: JSON.stringify([]), // Empty for now, as suggested categories are handled separately
       };
 
       const response = await api.post('/posts', postData, {
@@ -168,7 +170,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
       editor.commands.clearContent();
       setTags([]);
       setCategoryIds([]);
-      setNewCategory('');
+      setSuggestedCategory('');
       onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'Error creating post');
@@ -185,28 +187,28 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
           <div className="toolbar z-50 flex flex-wrap space-x-1 p-2 bg-card border-b border-theme rounded-t-lg">
             <button
               onClick={() => editor.chain().focus().toggleBold().run()}
-              className={`p-1 rounded ${editor.isActive('bold') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-theme'}`}
+              className={`p-1 rounded ${editor.isActive('bold') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 text-theme'}`}
               title="Bold"
             >
               <Bold className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleItalic().run()}
-              className={`p-1 rounded ${editor.isActive('italic') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-theme'}`}
+              className={`p-1 rounded ${editor.isActive('italic') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 text-theme'}`}
               title="Italic"
             >
               <Italic className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleUnderline().run()}
-              className={`p-1 rounded ${editor.isActive('underline') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-theme'}`}
+              className={`p-1 rounded ${editor.isActive('underline') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 text-theme'}`}
               title="Underline"
             >
               <Underline className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleStrike().run()}
-              className={`p-1 rounded ${editor.isActive('strike') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-theme'}`}
+              className={`p-1 rounded ${editor.isActive('strike') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 text-theme'}`}
               title="Strikethrough"
             >
               <Strikethrough className="h-5 w-5" />
@@ -218,7 +220,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
                   editor.chain().focus().setLink({ href: url, target: '_blank' }).run();
                 }
               }}
-              className={`p-1 rounded ${editor.isActive('link') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-theme'}`}
+              className={`p-1 rounded ${editor.isActive('link') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 text-theme'}`}
               title="Insert Link"
             >
               <LinkIcon className="h-5 w-5" />
@@ -231,96 +233,96 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
               id="image-upload"
               ref={fileInputRef}
             />
-            <label htmlFor="image-upload" className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded cursor-pointer text-theme" title="Upload Image">
+            <label htmlFor="image-upload" className="p-1 hover:bg-gray-200 rounded cursor-pointer text-theme" title="Upload Image">
               <ImageIcon className="h-5 w-5" />
             </label>
             <button
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-theme"
+              className="p-1 hover:bg-gray-200 rounded text-theme"
               title="Insert Emoji"
             >
               <Sparkles className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleBulletList().run()}
-              className={`p-1 rounded ${editor.isActive('bulletList') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-theme'}`}
+              className={`p-1 rounded ${editor.isActive('bulletList') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 text-theme'}`}
               title="Bullet List"
             >
               <List className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleOrderedList().run()}
-              className={`p-1 rounded ${editor.isActive('orderedList') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-theme'}`}
+              className={`p-1 rounded ${editor.isActive('orderedList') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 text-theme'}`}
               title="Ordered List"
             >
               <ListOrdered className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleBlockquote().run()}
-              className={`p-1 rounded ${editor.isActive('blockquote') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-theme'}`}
+              className={`p-1 rounded ${editor.isActive('blockquote') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 text-theme'}`}
               title="Blockquote"
             >
               <Quote className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-              className={`p-1 rounded ${editor.isActive('codeBlock') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-theme'}`}
+              className={`p-1 rounded ${editor.isActive('codeBlock') ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 text-theme'}`}
               title="Code Block"
             >
               <Code className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().setHeading({ level: 1 }).run()}
-              className={`p-1 rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-theme'}`}
+              className={`p-1 rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 text-theme'}`}
               title="Heading 1"
             >
               <Heading1 className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().setHeading({ level: 2 }).run()}
-              className={`p-1 rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-theme'}`}
+              className={`p-1 rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 text-theme'}`}
               title="Heading 2"
             >
               <Heading2 className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().setHeading({ level: 3 }).run()}
-              className={`p-1 rounded ${editor.isActive('heading', { level: 3 }) ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-theme'}`}
+              className={`p-1 rounded ${editor.isActive('heading', { level: 3 }) ? 'bg-blue-500 text-white' : 'hover:bg-gray-200 text-theme'}`}
               title="Heading 3"
             >
               <Heading3 className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().undo().run()}
-              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-theme"
+              className="p-1 hover:bg-gray-200 rounded text-theme"
               title="Undo"
             >
               <Undo className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().redo().run()}
-              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-theme"
+              className="p-1 hover:bg-gray-200 rounded text-theme"
               title="Redo"
             >
               <Redo className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().clearNodes().run()}
-              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-theme"
+              className="p-1 hover:bg-gray-200 rounded text-theme"
               title="Clear Format"
             >
               <Eraser className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().setHorizontalRule().run()}
-              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-theme"
+              className="p-1 hover:bg-gray-200 rounded text-theme"
               title="Horizontal Rule"
             >
               <Minus className="h-5 w-5" />
             </button>
             <button
               onClick={() => editor.chain().focus().setHardBreak().run()}
-              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-theme"
+              className="p-1 hover:bg-gray-200 rounded text-theme"
               title="Hard Break"
             >
               <SeparatorHorizontal className="h-5 w-5" />
@@ -357,7 +359,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
                 key={category._id}
                 type="button"
                 onClick={() => handleCategoryToggle(category._id)}
-                className={`px-3 py-1 rounded-full text-sm ${categoryIds.includes(category._id) ? 'bg-blue-500 text-white' : 'tag'}`}
+                className={`px-3 py-1 rounded-full text-sm ${categoryIds.includes(category._id) ? 'bg-blue-500 text-white' : 'bg-gray-200 text-theme hover:bg-gray-300'}`}
               >
                 {category.name}
               </button>
@@ -367,8 +369,8 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
           <div className="flex gap-2 mb-4">
             <input
               type="text"
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
+              value={suggestedCategory}
+              onChange={(e) => setSuggestedCategory(e.target.value)}
               placeholder="Enter new category name"
               className="w-full p-2 border border-theme rounded bg-card text-theme"
             />
@@ -376,7 +378,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
               type="button"
               onClick={handleSuggestCategory}
               className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-              disabled={loading || !newCategory}
+              disabled={loading || !suggestedCategory}
             >
               Suggest
             </button>
@@ -397,7 +399,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
         <div className="flex z-50 justify-end space-x-2 mt-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 cancel-button rounded"
+            className="px-4 py-2 bg-gray-300 text-theme rounded hover:bg-gray-400"
             disabled={loading}
           >
             Cancel
