@@ -189,26 +189,41 @@ function Dashboard() {
           }));
           break;
         case 'approve_category':
-          await api.post(`/categories/approve/${targetId}`);
+          response = await api.post(`/categories/approve/${targetId}`);
+          const updatedCategoryRes = await api.get(`/categories`);
+          const updatedSuggestedCategoriesRes = await api.get(`/categories/suggested`);
           setData(prev => ({
             ...prev,
-            suggestedCategories: prev.suggestedCategories.filter(category => category._id !== targetId),
-            categories: [...prev.categories, prev.suggestedCategories.find(category => category._id === targetId)],
+            suggestedCategories: updatedSuggestedCategoriesRes.data,
+            categories: updatedCategoryRes.data,
             stats: {
               ...prev.stats,
-              totalCategories: prev.stats.totalCategories + 1,
-              totalSuggestedCategories: prev.stats.totalSuggestedCategories - 1,
+              totalCategories: updatedCategoryRes.data.length,
+              totalSuggestedCategories: updatedSuggestedCategoriesRes.data.length,
             },
           }));
           break;
         case 'reject_category':
-          await api.post(`/categories/reject/${targetId}`);
+          response = await api.post(`/categories/reject/${targetId}`);
+          const updatedSuggestedCategoriesResReject = await api.get(`/categories/suggested`);
           setData(prev => ({
             ...prev,
-            suggestedCategories: prev.suggestedCategories.filter(category => category._id !== targetId),
+            suggestedCategories: updatedSuggestedCategoriesResReject.data,
             stats: {
               ...prev.stats,
-              totalSuggestedCategories: prev.stats.totalSuggestedCategories - 1,
+              totalSuggestedCategories: updatedSuggestedCategoriesResReject.data.length,
+            },
+          }));
+          break;
+        case 'delete_category':
+          await api.delete(`/categories/${targetId}`, { data: { reason } });
+          const updatedCategoriesRes = await api.get(`/categories`);
+          setData(prev => ({
+            ...prev,
+            categories: updatedCategoriesRes.data,
+            stats: {
+              ...prev.stats,
+              totalCategories: updatedCategoriesRes.data.length,
             },
           }));
           break;
@@ -231,19 +246,14 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen background">
-      {/* Header */}
       <header className="background shadow-md">
         <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-theme">Bloggera Admin Dashboard</h1>
           <div className="flex items-center space-x-4">
-            <span className="text-theme">
-              Welcome, Admin
-            </span>
+            <span className="text-theme">Welcome, Admin</span>
           </div>
         </div>
       </header>
-
-      {/* Stats Overview */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-6 mb-8">
           <StatsCard
@@ -296,15 +306,11 @@ function Dashboard() {
             change="New this week"
           />
         </div>
-
-        {/* Error Message */}
         {error && (
           <div className="mb-6 p-4 bg-red-100 rounded-lg text-red-700 border border-red-200">
             {error}
           </div>
         )}
-
-        {/* Tabs */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
             <button
@@ -333,8 +339,6 @@ function Dashboard() {
             </button>
           </nav>
         </div>
-
-        {/* Tab Content */}
         <div className="background rounded-lg shadow overflow-hidden">
           {activeTab === 'reports' && (
             <ReportsSection
@@ -364,8 +368,6 @@ function Dashboard() {
           )}
         </div>
       </div>
-
-      {/* Action Modal */}
       {showActionModal && (
         <ActionModal
           type={showActionModal.type}

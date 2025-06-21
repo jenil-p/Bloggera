@@ -17,7 +17,7 @@ export default function CategoriesSection({ categories, suggestedCategories, onA
           {categories.map(category => (
             <div key={category._id} className="py-4 flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-medium text-theme">{category.name}</h3>
+                <h3 className="text-lg font-medium text-theme">{category.name || 'Unnamed Category'}</h3>
               </div>
               <button
                 onClick={() => onActionClick({ type: 'delete_category', targetId: category._id })}
@@ -37,7 +37,7 @@ export default function CategoriesSection({ categories, suggestedCategories, onA
           {suggestedCategories.map(category => (
             <div key={category._id} className="py-4 flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-medium text-theme">{category.name}</h3>
+                <h3 className="text-lg font-medium text-theme">{category.name || 'Unnamed Category'}</h3>
                 <p className="text-sm text-gray-500">
                   Suggested by: {category.suggestedBy?.username || 'Unknown'} on {new Date(category.createdAt).toLocaleDateString()}
                 </p>

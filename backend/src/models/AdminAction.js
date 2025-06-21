@@ -4,7 +4,7 @@ const adminActionSchema = new mongoose.Schema({
   admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   actionType: {
     type: String,
-    enum: ['delete_post','block_user','suspend_user','unsuspend_user','resolve_report','dismiss_report','approve_category','reject_category',
+    enum: ['delete_post','block_user','suspend_user','unsuspend_user','resolve_report','dismiss_report','approve_category','reject_category','delete_category',
     ],
     required: true,
   },

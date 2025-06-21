@@ -16,6 +16,21 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Get posts by category ID (admin only) - Added for ActionModal warning
+router.get('/posts', adminMiddleware, async (req, res) => {
+  try {
+    const { category } = req.query;
+    if (!category) {
+      return res.status(400).json({ message: 'Category ID is required' });
+    }
+    const posts = await Post.find({ categories: category });
+    res.json(posts);
+  } catch (error) {
+    console.error('Error fetching posts by category:', error.stack);
+    res.status(500).json({ message: 'Error fetching posts', error: error.message });
+  }
+});
+
 // Suggest a new category
 router.post('/suggest', authMiddleware, async (req, res) => {
   try {
@@ -70,8 +85,7 @@ router.post('/approve/:id', adminMiddleware, async (req, res) => {
     category.isApproved = true;
     await category.save();
 
-    // Move category from suggestedCategories to categories in posts
-    await Post.updateMany(
+    const updatedPosts = await Post.updateMany(
       { suggestedCategories: category._id },
       { $addToSet: { categories: category._id }, $pull: { suggestedCategories: category._id } }
     );
@@ -84,7 +98,11 @@ router.post('/approve/:id', adminMiddleware, async (req, res) => {
       details: `Approved category: ${category.name}`,
     });
 
-    res.json({ message: 'Category approved successfully' });
+    res.json({ 
+      message: 'Category approved successfully', 
+      category,
+      affectedPosts: updatedPosts.modifiedCount 
+    });
   } catch (error) {
     console.error('Error approving category:', error.stack);
     res.status(500).json({ message: 'Error approving category', error: error.message });
@@ -102,7 +120,6 @@ router.post('/reject/:id', adminMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Category already approved' });
     }
 
-    // Find or create a default "General" category
     let defaultCategory = await Category.findOne({ name: 'General', isApproved: true });
     if (!defaultCategory) {
       defaultCategory = new Category({
@@ -113,8 +130,7 @@ router.post('/reject/:id', adminMiddleware, async (req, res) => {
       await defaultCategory.save();
     }
 
-    // Reassign posts with this suggested category to the default category
-    await Post.updateMany(
+    const updatedPosts = await Post.updateMany(
       { suggestedCategories: category._id },
       { $addToSet: { categories: defaultCategory._id }, $pull: { suggestedCategories: category._id } }
     );
@@ -129,7 +145,10 @@ router.post('/reject/:id', adminMiddleware, async (req, res) => {
       details: `Rejected category: ${category.name}`,
     });
 
-    res.json({ message: 'Category suggestion rejected successfully' });
+    res.json({ 
+      message: 'Category suggestion rejected successfully',
+      affectedPosts: updatedPosts.modifiedCount 
+    });
   } catch (error) {
     console.error('Error rejecting category:', error.stack);
     res.status(500).json({ message: 'Error rejecting category', error: error.message });
@@ -168,6 +187,60 @@ router.post('/', adminMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Error creating category:', error.stack);
     res.status(500).json({ message: 'Error creating category', error: error.message });
+  }
+});
+
+// Delete a category (admin only)
+router.delete('/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    if (!reason) {
+      return res.status(400).json({ message: 'Reason is required' });
+    }
+
+    const category = await Category.findById(req.params.id);
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    let defaultCategory = await Category.findOne({ name: 'General', isApproved: true });
+    if (!defaultCategory) {
+      defaultCategory = new Category({
+        name: 'General',
+        isApproved: true,
+        suggestedBy: null,
+      });
+      await defaultCategory.save();
+    }
+
+    // Step 1: Remove the category from posts
+    const removedPosts = await Post.updateMany(
+      { categories: category._id },
+      { $pull: { categories: category._id } }
+    );
+
+    // Step 2: Add the General category to posts that had the deleted category
+    const updatedPosts = await Post.updateMany(
+      { _id: { $in: (await Post.find({ categories: category._id })).map(p => p._id) } },
+      { $addToSet: { categories: defaultCategory._id } }
+    );
+
+    await category.deleteOne();
+
+    await AdminAction.create({
+      admin: req.user._id,
+      actionType: 'delete_category',
+      reason,
+      details: `Deleted category: ${category.name}, reassigned ${updatedPosts.modifiedCount} posts to General`,
+    });
+
+    res.json({ 
+      message: 'Category deleted successfully',
+      affectedPosts: updatedPosts.modifiedCount 
+    });
+  } catch (error) {
+    console.error('Error deleting category:', error.stack);
+    res.status(500).json({ message: 'Error deleting category', error: error.message });
   }
 });
 
