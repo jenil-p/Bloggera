@@ -20,7 +20,7 @@ function App() {
       <Router>
         <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)' }}>
           <Navbar />
-          <main className="flex-grow pt-20">
+          <main className="flex-grow">
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Enter />} />
