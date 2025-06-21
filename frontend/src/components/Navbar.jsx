@@ -9,7 +9,6 @@ function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Check authentication status and admin status
   const token = localStorage.getItem('token');
   const isAuthenticated = !!token;
   let isAdmin = false;
@@ -23,11 +22,9 @@ function Navbar() {
     }
   }
 
-  // Logout function
   const handleLogout = async () => {
-    if (confirm("Are you sure want to log out ?")) {
+    if (confirm("Are you sure want to log out?")) {
       try {
-
         await fetch('http://localhost:3000/api/auth/logout', {
           method: 'POST',
           headers: {
@@ -38,60 +35,32 @@ function Navbar() {
       } catch (err) {
         console.error('Logout error:', err);
       }
-      // Clear token and redirect
       localStorage.removeItem('token');
       navigate('/');
     }
   };
 
-  // Hide the navbar on the Enter page ("/")
-  if (location.pathname === '/') {
-    return null;
-  }
+  if (location.pathname === '/') return null;
 
   return (
-    <nav className="sticky top-4 z-50 mx-auto mt-4 w-[90%] max-w-4xl rounded-full backdrop-blur-3xl px-6 py-3 shadow-lg flex items-center justify-between">
-      {/* Logo */}
+    <nav className="sticky top-4 z-50 mx-auto mt-4 w-[90%] max-w-4xl rounded-full backdrop-blur-3xl px-6 py-3 shadow-lg flex items-center justify-between bg-white/10 dark:bg-black/10 border border-white/10">
       <Link to="/home" className="flex items-center space-x-2">
-        <h1 className="text-2xl font-extrabold gradient-text animate-pulse">
+        <h1 className="text-2xl font-extrabold bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent">
           Bloggera
         </h1>
       </Link>
 
-      {/* Navigation Links */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4 md:gap-6">
         {isAuthenticated ? (
           <>
-            {/* Home Link */}
-            <Link to="/home" className="flex items-center space-x-1 text-theme hover:text-gray-500 transition-all duration-300 transform hover:scale-110">
-              <FaHome className="text-lg" />
-              <span className="hidden md:inline">Home</span>
-            </Link>
-
-            {/* Search Link */}
-            <Link to="/search" className="flex items-center space-x-1 text-theme hover:text-gray-500 transition-all duration-300 transform hover:scale-110">
-              <FaSearch className="text-lg" />
-              <span className="hidden md:inline">Search</span>
-            </Link>
-
-            {/* Profile Link */}
-            <Link to="/profile" className="flex items-center space-x-1 text-theme hover:text-gray-500 transition-all duration-300 transform hover:scale-110">
-              <FaUser className="text-lg" />
-              <span className="hidden md:inline">Profile</span>
-            </Link>
-
-            {/* Admin Link (only for admins) */}
-            {isAdmin && (
-              <Link to="/admin" className="flex items-center space-x-1 text-theme hover:text-gray-500 transition-all duration-300 transform hover:scale-110">
-                <FaShieldAlt className="text-lg" />
-                <span className="hidden md:inline">Admin</span>
-              </Link>
-            )}
-
-            {/* Logout Button */}
+            <NavItem to="/home" icon={<FaHome />} text="Home" />
+            <NavItem to="/search" icon={<FaSearch />} text="Search" />
+            <NavItem to="/profile" icon={<FaUser />} text="Profile" />
+            {isAdmin && <NavItem to="/admin" icon={<FaShieldAlt />} text="Admin" />}
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-1 text-theme hover:text-red-500 transition-all duration-300 transform hover:scale-110"
+              className="flex items-center space-x-1 text-theme hover:text-red-500 transition-all duration-300 hover:scale-110"
+              aria-label="Logout"
             >
               <FaSignOutAlt className="text-lg" />
               <span className="hidden md:inline">Logout</span>
@@ -100,17 +69,18 @@ function Navbar() {
         ) : (
           <button
             onClick={() => navigate('/')}
-            className="flex items-center space-x-1 text-theme hover:text-gray-500 transition-all duration-300 transform hover:scale-110"
+            className="flex items-center space-x-1 text-theme hover:text-gray-500 transition-all duration-300 hover:scale-110"
+            aria-label="Login"
           >
             <FaUser className="text-lg" />
-            <span className="hidden md:inline">Login / Signup</span>
+            <span className="hidden md:inline">Login</span>
           </button>
         )}
 
-        {/* Theme Toggle Button */}
         <button
           onClick={toggleTheme}
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 dark:bg-black/20 transition-all duration-300 transform hover:scale-110"
+          className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/20 dark:bg-black/20 transition-all duration-300 hover:scale-110"
+          aria-label="Toggle theme"
         >
           {theme === 'light' ? (
             <FaMoon className="text-lg text-theme" />
@@ -122,5 +92,16 @@ function Navbar() {
     </nav>
   );
 }
+
+const NavItem = ({ to, icon, text }) => (
+  <Link
+    to={to}
+    className="flex items-center space-x-1 text-theme hover:text-gray-500 transition-all duration-300 hover:scale-110"
+    aria-label={text}
+  >
+    <span className="text-lg">{icon}</span>
+    <span className="hidden md:inline">{text}</span>
+  </Link>
+);
 
 export default Navbar;

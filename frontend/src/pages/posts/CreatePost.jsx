@@ -36,7 +36,6 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
   const [error, setError] = useState(null);
   const [tags, setTags] = useState([]);
   const [categoryIds, setCategoryIds] = useState([]);
-  const [suggestedCategory, setSuggestedCategory] = useState('');
   const [categories, setCategories] = useState([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -118,23 +117,6 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
     );
   };
 
-  const handleSuggestCategory = async () => {
-    if (!suggestedCategory) {
-      setError('Please enter a category name to suggest');
-      return;
-    }
-    setLoading(true);
-    try {
-      const response = await api.post('/categories/suggest', { name: suggestedCategory });
-      setCategories(prev => [...prev, response.data.category]);
-      setSuggestedCategory('');
-      alert('Category suggestion submitted for review');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error suggesting category');
-    }
-    setLoading(false);
-  };
-
   const handleSubmit = async () => {
     if (!editor) {
       setError('Editor not initialized.');
@@ -158,7 +140,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
         content: JSON.stringify(editor.getJSON()),
         tags: JSON.stringify(tags),
         categoryIds: JSON.stringify(categoryIds),
-        suggestedCategoryIds: JSON.stringify([]), // Empty for now, as suggested categories are handled separately
+        suggestedCategoryIds: JSON.stringify([]),
       };
 
       const response = await api.post('/posts', postData, {
@@ -170,7 +152,6 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
       editor.commands.clearContent();
       setTags([]);
       setCategoryIds([]);
-      setSuggestedCategory('');
       onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'Error creating post');
@@ -345,7 +326,7 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
               <option value="Helvetica">Helvetica</option>
               <option value="Times New Roman">Times New Roman</option>
               <option value="Courier New">Courier New</option>
-              <option value="Georgia">Georgia</option>
+              <option value="Georgia}">Georgia</option>
               <option value="Verdana">Verdana</option>
             </select>
           </div>
@@ -364,24 +345,6 @@ function CreatePost({ isOpen, onClose, onPostCreated }) {
                 {category.name}
               </button>
             ))}
-          </div>
-          <label className="block text-sm font-medium text-theme mb-2">Suggest a New Category</label>
-          <div className="flex gap-2 mb-4">
-            <input
-              type="text"
-              value={suggestedCategory}
-              onChange={(e) => setSuggestedCategory(e.target.value)}
-              placeholder="Enter new category name"
-              className="w-full p-2 border border-theme rounded bg-card text-theme"
-            />
-            <button
-              type="button"
-              onClick={handleSuggestCategory}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-              disabled={loading || !suggestedCategory}
-            >
-              Suggest
-            </button>
           </div>
         </div>
         <input
