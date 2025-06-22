@@ -426,6 +426,8 @@ router.post('/:id/report', authMiddleware, async (req, res) => {
       message,
     });
 
+    console.log(report);
+
     await report.save();
     res.status(201).json({ message: 'Post reported successfully' });
   } catch (error) {

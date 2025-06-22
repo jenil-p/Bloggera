@@ -6,6 +6,7 @@ const AdminAction = require('../models/AdminAction');
 const Comment = require('../models/Comment');
 const { adminMiddleware } = require('../middleware/authMiddleware');
 const router = express.Router();
+const mongoose = require('mongoose');
 
 // Get all users
 router.get('/users', adminMiddleware, async (req, res) => {
@@ -46,6 +47,48 @@ router.delete('/posts/:id', adminMiddleware, async (req, res) => {
     res.json({ message: 'Post and associated comments deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting post', error: error.message });
+  }
+});
+
+router.delete('/posts', adminMiddleware, async (req, res) => {
+  try {
+    const { postIds, reason, deleteAll } = req.body;
+    if (!reason) {
+      return res.status(400).json({ message: 'Reason is required' });
+    }
+    let targetPosts;
+    if (deleteAll) {
+      targetPosts = await Post.find({ isDeleted: false, isArchived: false });
+    } else {
+      if (!postIds || !Array.isArray(postIds) || postIds.length === 0) {
+        return res.status(400).json({ message: 'Post IDs array is required unless deleteAll is true' });
+      }
+      if (postIds.some(id => !mongoose.isValidObjectId(id))) {
+        return res.status(400).json({ message: 'Invalid post ID(s)' });
+      }
+      targetPosts = await Post.find({ _id: { $in: postIds }, isDeleted: false, isArchived: false });
+      if (targetPosts.length !== postIds.length) {
+        return res.status(404).json({ message: 'One or more posts not found' });
+      }
+    }
+    const adminActions = [];
+    for (const post of targetPosts) {
+      post.isDeleted = true;
+      await post.save();
+      await Comment.updateMany({ post: post._id, isDeleted: false }, { isDeleted: true });
+      adminActions.push({
+        admin: req.user._id,
+        actionType: 'delete_post',
+        targetPost: post._id,
+        reason: reason || 'Bulk post deletion by admin',
+        createdAt: new Date(),
+      });
+    }
+    await AdminAction.insertMany(adminActions);
+    res.json({ message: `${targetPosts.length} post(s) and associated comments deleted successfully` });
+  } catch (error) {
+    console.error('Error deleting posts:', error.stack);
+    res.status(500).json({ message: 'Error deleting posts', error: error.message });
   }
 });
 

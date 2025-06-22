@@ -1,9 +1,11 @@
 import { useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Post from './posts/Post';
+import PostCard from './posts/PostCard';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
+import { MdFormatListBulleted, MdFeaturedPlayList, MdCameraAlt } from "react-icons/md";
 
 function UserProfile() {
   const { username } = useParams();
@@ -13,6 +15,7 @@ function UserProfile() {
   const [isBlocked, setIsBlocked] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState('list'); // 'list' for Post, 'grid' for PostCard
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -102,7 +105,6 @@ function UserProfile() {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <img
-              // src={user.avatar || 'https://via.placeholder.com/40'}
               src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${user.avatar}`}
               alt="avatar"
               className="h-16 w-16 rounded-full mr-4 object-cover"
@@ -121,25 +123,48 @@ function UserProfile() {
           </button>
         </div>
       </div>
+      <div className="flex justify-end mb-4">
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded ${viewMode === 'list' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          >
+            <MdFormatListBulleted className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded ${viewMode === 'grid' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          >
+            <MdFeaturedPlayList className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
       {error && <p className="text-red-500 text-center">{error}</p>}
-      <div className="space-y-4">
+      <div className={viewMode === 'list' ? 'space-y-4' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'}>
         {posts.length === 0 ? (
           <p className="text-center text-theme">No posts available</p>
         ) : (
           posts.map(post => (
-            <Post
-              key={post._id}
-              post={post}
-              onLike={handleLike}
-              onComment={handleComment}
-              onShare={handleShare}
-              onSave={handleSave}
-              onReport={handleReport}
-              isOwnPost={post.author._id.toString() === localStorage.getItem('userId')}
-              onDelete={() => {}}
-              onArchive={() => {}}
-              onRestrictComments={() => {}}
-            />
+            viewMode === 'list' ? (
+              <Post
+                key={post._id}
+                post={post}
+                onLike={handleLike}
+                onComment={handleComment}
+                onSave={handleSave}
+                onReport={handleReport}
+                isOwnPost={post.author._id.toString() === localStorage.getItem('userId')}
+                onDelete={() => {}}
+                onArchive={() => {}}
+                onRestrictComments={() => {}}
+              />
+            ) : (
+              <PostCard
+                key={post._id}
+                post={post}
+                onClick={() => window.location.href = `/post/${post._id}`}
+              />
+            )
           ))
         )}
       </div>

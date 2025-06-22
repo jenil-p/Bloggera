@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import Post from './posts/Post';
+import PostCard from './posts/PostCard';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
-import { CameraIcon } from '@heroicons/react/24/outline';
+import { MdFormatListBulleted, MdFeaturedPlayList, MdCameraAlt } from "react-icons/md";
 
 function Profile() {
   const { theme } = useTheme();
@@ -18,6 +19,7 @@ function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
+  const [viewMode, setViewMode] = useState('list'); // 'list' for Post, 'grid' for PostCard
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -25,22 +27,16 @@ function Profile() {
         const userResponse = await api.get('/auth/me');
         setUser(userResponse.data);
         setAvatarPreview(userResponse.data.avatar);
-
         const postsResponse = await api.get('/posts?author=me');
         setPosts(postsResponse.data);
-
         const archivedPostsResponse = await api.get('/posts?author=me&archived=true');
         setArchivedPosts(archivedPostsResponse.data);
-
         const commentsResponse = await api.get('/comments?author=me');
         setComments(commentsResponse.data);
-
         const likedPostsResponse = await api.get('/posts?liked=true');
         setLikedPosts(likedPostsResponse.data);
-
         const savedPostsResponse = await api.get('/posts?saved=true');
         setSavedPosts(savedPostsResponse.data);
-
         setLoading(false);
       } catch (err) {
         setError(err.response?.data?.message || 'Error fetching profile data');
@@ -68,7 +64,6 @@ function Profile() {
       if (avatarFile) {
         formData.append('avatar', avatarFile);
       }
-
       const response = await api.put('/users/profile', formData);
       setUser(response.data);
       setAvatarPreview(response.data.avatar);
@@ -185,7 +180,7 @@ function Profile() {
               />
               {isEditing && (
                 <label className="absolute bottom-0 right-0 bg-blue-500 rounded-full p-1 cursor-pointer">
-                  <CameraIcon className="h-4 w-4 text-white" />
+                  <MdCameraAlt className="h-4 w-4 text-white" />
                   <input
                     type="file"
                     accept="image/jpeg,image/jpg,image/png"
@@ -242,58 +237,92 @@ function Profile() {
           </form>
         )}
       </div>
-      <div className="flex border-b border-theme mb-4">
-        {['posts', 'archived', 'comments', 'liked', 'saved'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 ${activeTab === tab ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-500'}`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
+      <div className="flex justify-between items-center border-b border-theme mb-4">
+        <div className="flex">
+          {['posts', 'archived', 'comments', 'liked', 'saved'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 ${activeTab === tab ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-500'}`}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
+        </div>
+        {(activeTab === 'posts' || activeTab === 'archived') && (
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded ${viewMode === 'list' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            >
+              <MdFormatListBulleted className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded ${viewMode === 'grid' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            >
+              <MdFeaturedPlayList className="h-5 w-5" />
+            </button>
+          </div>
+        )}
       </div>
       {error && <p className="text-red-500 text-center">{error}</p>}
       {activeTab === 'posts' && (
-        <div className="space-y-4">
+        <div className={viewMode === 'list' ? 'space-y-4' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'}>
           {posts.length === 0 ? (
             <p className="text-center text-theme">No posts available</p>
           ) : (
             posts.map(post => (
-              <Post
-                key={post._id}
-                post={post}
-                onLike={handleLike}
-                onComment={handleComment}
-                onSave={handleSave}
-                onReport={handleReport}
-                isOwnPost={true}
-                onDelete={handleDeletePost}
-                onArchive={handleArchive}
-                onRestrictComments={handleRestrictComments}
-              />
+              viewMode === 'list' ? (
+                <Post
+                  key={post._id}
+                  post={post}
+                  onLike={handleLike}
+                  onComment={handleComment}
+                  onSave={handleSave}
+                  onReport={handleReport}
+                  isOwnPost={true}
+                  onDelete={handleDeletePost}
+                  onArchive={handleArchive}
+                  onRestrictComments={handleRestrictComments}
+                />
+              ) : (
+                <PostCard
+                  key={post._id}
+                  post={post}
+                  onClick={() => window.location.href = `/post/${post._id}`}
+                />
+              )
             ))
           )}
         </div>
       )}
       {activeTab === 'archived' && (
-        <div className="space-y-4">
+        <div className={viewMode === 'list' ? 'space-y-4' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'}>
           {archivedPosts.filter(post => post.isArchived).length === 0 ? (
             <p className="text-center text-theme">No archived posts</p>
           ) : (
             archivedPosts.filter(post => post.isArchived).map(post => (
-              <Post
-                key={post._id}
-                post={post}
-                onLike={handleLike}
-                onComment={handleComment}
-                onSave={handleSave}
-                onReport={handleReport}
-                isOwnPost={true}
-                onDelete={handleDeletePost}
-                onArchive={handleArchive}
-                onRestrictComments={handleRestrictComments}
-              />
+              viewMode === 'list' ? (
+                <Post
+                  key={post._id}
+                  post={post}
+                  onLike={handleLike}
+                  onComment={handleComment}
+                  onSave={handleSave}
+                  onReport={handleReport}
+                  isOwnPost={true}
+                  onDelete={handleDeletePost}
+                  onArchive={handleArchive}
+                  onRestrictComments={handleRestrictComments}
+                />
+              ) : (
+                <PostCard
+                  key={post._id}
+                  post={post}
+                  onClick={() => window.location.href = `/post/${post._id}`}
+                />
+              )
             ))
           )}
         </div>
