@@ -27,7 +27,7 @@ export default function CategorySidebar({ categories, selectedCategory, onSelect
   };
 
   return (
-    <div className="h-full background scrollbar-hide overflow-y-auto">
+    <div className="h-full background scrollbar-hide overflow-y-auto max-sm:pb-10">
       <div className="p-4">
         <h3 className="text-lg font-semibold">Categories</h3>
         <nav className="mt-4 space-y-1">

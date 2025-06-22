@@ -151,18 +151,6 @@ function Post({
 
   return (
     <>
-      <div className="md:hidden w-screen max-sm:backdrop-blur-sm sticky top-0 sm:top-20 z-30 shadow-sm p-4 flex justify-between items-center">
-        <button
-          onClick={() => setMobileSidebarOpen(true)}
-          className="p-2 rounded-md text-theme"
-        >
-          <FiMenu className="w-5 h-5" />
-        </button>
-        <h1 className="sm:hidden text-xl font-bold text-theme">Bloggera</h1>
-        <button onClick={() => setShowCreatePostModal(true)} className="relative inline-block text-lg group">
-          <FiPlus className="w-5 h-5" />
-        </button>
-      </div>
       <div className="bg-card shadow-md rounded-lg p-4 mb-4 border border-theme">
         {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
         <div className="flex items-center justify-between mb-4">

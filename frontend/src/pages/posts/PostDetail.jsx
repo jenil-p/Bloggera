@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import Post from './Post';
 import RelatedPostsSidebar from './RelatedPostsSidebar';
+import { Link } from 'react-router-dom';
 import api from '../../utils/api';
 
 function PostDetail() {
@@ -65,31 +66,41 @@ function PostDetail() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 flex max-lg:flex-col">
-      {/* Main Content */}
-      <div className="flex-1">
-        <Post
-          post={post}
-          onLike={handleLike}
-          onComment={handleComment}
-          onSave={handleSave}
-          onReport={handleReport}
-          isOwnPost={post.author._id.toString() === localStorage.getItem('userId')}
-          onDelete={handleDelete}
-          onArchive={handleArchive}
-          onRestrictComments={handleRestrictComments}
-        />
+    <>
+      <div className="md:hidden max-sm:backdrop-blur-sm sticky top-0 sm:top-20 z-30 shadow-sm p-4 flex justify-between items-center">
+        <Link to="/home" className="sm:hidden flex items-center space-x-2">
+          <h1 className="text-2xl font-extrabold bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent">
+            Bloggera
+          </h1>
+        </Link>
       </div>
 
-      {/* Right Sidebar: Related Posts */}
-      <div className="w-1/4 max-lg:w-full lg:pl-4">
-        <RelatedPostsSidebar
-          currentPostId={id}
-          categories={post.categories?.map(cat => cat._id) || []}
-          tags={post.tags || []}
-        />
+      <div className="max-w-7xl mx-auto p-4 flex max-lg:flex-col">
+        {/* Main Content */}
+        <div className="flex-1">
+          <Post
+            post={post}
+            onLike={handleLike}
+            onComment={handleComment}
+            onSave={handleSave}
+            onReport={handleReport}
+            isOwnPost={post.author._id.toString() === localStorage.getItem('userId')}
+            onDelete={handleDelete}
+            onArchive={handleArchive}
+            onRestrictComments={handleRestrictComments}
+          />
+        </div>
+
+        {/* Right Sidebar: Related Posts */}
+        <div className="w-1/4 max-lg:w-full lg:pl-4">
+          <RelatedPostsSidebar
+            currentPostId={id}
+            categories={post.categories?.map(cat => cat._id) || []}
+            tags={post.tags || []}
+          />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

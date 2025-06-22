@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import PostCard from './posts/PostCard';
 import CreatePost from './posts/CreatePost';
 import CategorySidebar from './posts/CategorySidebar';
+import { Link } from 'react-router-dom';
 import api from '../utils/api';
 import { FiMenu, FiX, FiPlus, FiFileText } from 'react-icons/fi';
 import '../index.css';
@@ -70,10 +71,14 @@ function Home() {
         >
           <FiMenu className="w-5 h-5" />
         </button>
-        <h1 className="sm:hidden text-xl font-bold text-theme">Bloggera</h1>
-        <button onClick={() => setShowCreatePostModal(true)} className="relative inline-block text-lg group">
+        <Link to="/home" className="sm:hidden flex items-center space-x-2">
+          <h1 className="text-2xl font-extrabold bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent">
+            Bloggera
+          </h1>
+        </Link>
+        {/* <button onClick={() => setShowCreatePostModal(true)} className="relative inline-block text-lg group">
           <FiPlus className="w-5 h-5" />
-        </button>
+        </button> */}
       </div>
 
       <div className="flex flex-1 overflow-hidden">
@@ -95,13 +100,12 @@ function Home() {
               onClick={() => setMobileSidebarOpen(false)}
             />
             <div className="fixed inset-y-0 left-0 w-64 background shadow-xl transform transition-transform duration-300">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Categories</h2>
+              <div className="p-4 border-b border-theme flex justify-between items-center">
                 <button
                   onClick={() => setMobileSidebarOpen(false)}
-                  className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="p-1 rounded-lg hover:background"
                 >
-                  <FiX className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                  <FiX className="w-5 h-5 text-theme" />
                 </button>
               </div>
               <nav className="mt-4 overflow-y-auto h-[calc(100%-60px)]">
@@ -123,7 +127,7 @@ function Home() {
         <main className="flex-1 overflow-y-auto p-6 md:ml-64">
           {/* Desktop Header */}
           <div className="hidden md:flex justify-between items-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+            <h1 className="text-2xl font-bold text-theme">
               {selectedCategory
                 ? `Posts in ${categories.find(c => c._id === selectedCategory)?.name || 'Category'}`
                 : 'All Posts'}
@@ -133,14 +137,14 @@ function Home() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
               <FiPlus className="w-5 h-5" />
-              <span>Create Post</span>
+              <span>Write Something...</span>
             </button>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-red-600 dark:text-red-400">{error}</p>
+            <div className="mb-6 p-4 bg-red-200 border border-red-400 rounded-lg">
+              <p className="text-red-500">{error}</p>
             </div>
           )}
 
@@ -151,13 +155,13 @@ function Home() {
             </div>
           ) : posts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500" />
+              <div className="w-24 h-24 background rounded-full flex items-center justify-center mb-4">
+                <FiFileText className="w-10 h-10 text-theme" />
               </div>
-              <h3 className="text-xl font-medium text-gray-800 dark:text-gray-200 mb-2">
+              <h3 className="text-xl font-medium text-theme mb-2">
                 No posts found
               </h3>
-              <p className="text-gray-500 dark:text-gray-400 max-w-md">
+              <p className="text-theme-400 max-w-md">
                 {selectedCategory
                   ? `There are no posts in this category yet. Be the first to create one!`
                   : 'No posts available yet. Create the first post!'}
@@ -166,7 +170,7 @@ function Home() {
                 onClick={() => setShowCreatePostModal(true)}
                 className="mt-6 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
-                Create Post
+                Write something...
               </button>
             </div>
           ) : (
