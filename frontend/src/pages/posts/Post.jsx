@@ -180,7 +180,7 @@ function Post({
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-theme"
+              className="p-2 rounded-full hover:bg-[#62616138] text-theme"
             >
               <EllipsisHorizontalIcon className="h-6 w-6" />
             </button>
@@ -191,25 +191,25 @@ function Post({
                     <>
                       <button
                         onClick={handleDelete}
-                        className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-[#62616138]"
                       >
                         Delete Post
                       </button>
                       <button
                         onClick={handleArchive}
-                        className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#62616138]"
                       >
                         {post.isArchived ? 'Unarchive Post' : 'Archive Post'}
                       </button>
                       <button
                         onClick={handleRestrictComments}
-                        className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#62616138]"
                       >
                         {post.restrictComments ? 'Allow Comments' : 'Restrict Comments'}
                       </button>
                       <button
                         onClick={handleCopyLink}
-                        className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#62616138]"
                       >
                         Copy Link
                       </button>
@@ -221,19 +221,19 @@ function Post({
                           setShowReportModal(true);
                           setShowMenu(false);
                         }}
-                        className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#62616138]"
                       >
                         Report
                       </button>
                       <button
                         onClick={handleBlockUser}
-                        className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-[#62616138]"
                       >
                         Block User
                       </button>
                       <button
                         onClick={handleCopyLink}
-                        className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="block w-full text-left px-4 py-2 text-sm text-theme hover:bg-[#62616138]"
                       >
                         Copy Link
                       </button>
