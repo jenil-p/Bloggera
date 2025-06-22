@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import 'tailwind-scrollbar-hide/v4';
 
 :root {
   --bg-color: #ffffff;
@@ -24,6 +25,7 @@
   --green-700: #15803d;
   --indigo-500: #6366f1;
   --button-bg:#c3c3c3;
+  --opposite-bg:#000000;
 }
 
 [data-theme="dark"] {
@@ -50,6 +52,7 @@
   --green-700: #16a34a;
   --indigo-500: #818cf8;
   --button-bg: #f5f4f41f;
+  --opposite-bg:#ffffff;
 }
 
 body {
@@ -71,6 +74,10 @@ body {
 
 .background{
   background-color: var(--bg-color);
+}
+
+.opposite-background{
+  background-color: var(--opposite-bg);
 }
 
 .border-card{

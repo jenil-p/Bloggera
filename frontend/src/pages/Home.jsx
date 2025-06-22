@@ -63,18 +63,15 @@ function Home() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Mobile Header */}
-      <div className="md:hidden sticky top-20 z-30 background shadow-sm p-4 flex justify-between items-center">
+      <div className="md:hidden max-sm:backdrop-blur-sm sticky top-0 sm:top-20 z-30 shadow-sm p-4 flex justify-between items-center">
         <button
           onClick={() => setMobileSidebarOpen(true)}
-          className="p-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+          className="p-2 rounded-md text-theme"
         >
           <FiMenu className="w-5 h-5" />
         </button>
-        <h1 className="text-xl font-bold text-gray-800 dark:text-white">Bloggera</h1>
-        <button
-          onClick={() => setShowCreatePostModal(true)}
-          className="p-2 rounded-md bg-blue-600 text-white"
-        >
+        <h1 className="sm:hidden text-xl font-bold text-theme">Bloggera</h1>
+        <button onClick={() => setShowCreatePostModal(true)} className="relative inline-block text-lg group">
           <FiPlus className="w-5 h-5" />
         </button>
       </div>
