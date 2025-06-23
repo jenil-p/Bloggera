@@ -105,7 +105,7 @@ function UserProfile() {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <img
-              src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${user.avatar}`}
+              src={user.avatar || "/default-avatar.png"}
               alt="avatar"
               className="h-16 w-16 rounded-full mr-4 object-cover"
             />

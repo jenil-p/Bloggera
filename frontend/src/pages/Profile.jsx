@@ -174,7 +174,7 @@ function Profile() {
           <div className="flex items-center">
             <div className="relative">
               <img
-                src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${avatarPreview}`}
+                src={avatarPreview || "/default-avatar.png"}
                 alt="avatar"
                 className="h-16 w-16 rounded-full mr-4 object-cover"
               />

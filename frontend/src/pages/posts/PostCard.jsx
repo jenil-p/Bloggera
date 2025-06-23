@@ -13,7 +13,7 @@ export default function PostCard({ post, onClick }) {
       {post.image && (
         <div className="relative h-48 w-full overflow-hidden">
           <img
-            src={post.image}
+            src={post.image || "/default-image.png"}
             alt={post.title || 'Post image'}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
@@ -43,7 +43,7 @@ export default function PostCard({ post, onClick }) {
         </div>
         <div className="flex items-center">
           <img
-            src={`http://localhost:3000${post.author.avatar}`}
+            src={post.author.avatar || "/default-avatar.png"}
             alt={post.author.username}
             className="h-10 w-10 rounded-full mr-3 object-cover border-2 border-cyan-500"
           />

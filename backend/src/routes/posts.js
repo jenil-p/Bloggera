@@ -8,16 +8,10 @@ const Report = require('../models/Report');
 const AdminAction = require('../models/AdminAction');
 const Category = require('../models/Category');
 const { authMiddleware } = require('../middleware/authMiddleware');
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const router = express.Router();
 const mongoose = require('mongoose');
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: './Uploads/posts/',
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  },
-});
+const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024 },
@@ -31,6 +25,7 @@ const upload = multer({
     cb(new Error('Only images (jpeg, jpg, png, gif) are allowed'));
   },
 });
+
 
 router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
   try {
@@ -133,10 +128,42 @@ router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
       }
     }
 
+    let imageUrl = null;
+    if (req.file) {
+      if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_REGION || !process.env.S3_BUCKET_NAME) {
+        console.error('Missing AWS environment variables:', {
+          AWS_REGION: process.env.AWS_REGION,
+          AWS_ACCESS_KEY_ID: !!process.env.AWS_ACCESS_KEY_ID,
+          AWS_SECRET_ACCESS_KEY: !!process.env.AWS_SECRET_ACCESS_KEY,
+          S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
+        });
+        return res.status(500).json({ message: 'AWS configuration incomplete' });
+      }
+
+      const s3 = new S3Client({
+        region: process.env.AWS_REGION,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        },
+      });
+
+      const fileName = `${Date.now()}-${req.file.originalname}`;
+      const params = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `posts/${fileName}`,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      };
+
+      await s3.send(new PutObjectCommand(params));
+      imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/posts/${fileName}`;
+    }
+
     const post = new Post({
       author: req.user._id,
       content,
-      image: req.file ? `/Uploads/posts/${req.file.filename}` : null,
+      image: imageUrl,
       tags: tags ? JSON.parse(tags) : [],
       categories: parsedCategoryIds,
       suggestedCategories: parsedSuggestedCategoryIds,
@@ -426,8 +453,6 @@ router.post('/:id/report', authMiddleware, async (req, res) => {
       message,
     });
 
-    console.log(report);
-
     await report.save();
     res.status(201).json({ message: 'Post reported successfully' });
   } catch (error) {
@@ -533,7 +558,35 @@ router.post('/upload-image', authMiddleware, upload.single('image'), async (req,
     if (!req.file) {
       return res.status(400).json({ message: 'No image uploaded' });
     }
-    const imageUrl = `${process.env.UPLOADS_URL || 'http://localhost:3000'}/posts/${req.file.filename}`;
+
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_REGION || !process.env.S3_BUCKET_NAME) {
+      console.error('Missing AWS environment variables:', {
+        AWS_REGION: process.env.AWS_REGION,
+        AWS_ACCESS_KEY_ID: !!process.env.AWS_ACCESS_KEY_ID,
+        AWS_SECRET_ACCESS_KEY: !!process.env.AWS_SECRET_ACCESS_KEY,
+        S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
+      });
+      return res.status(500).json({ message: 'AWS configuration incomplete' });
+    }
+
+    const s3 = new S3Client({
+      region: process.env.AWS_REGION,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      },
+    });
+
+    const fileName = `${Date.now()}-${req.file.originalname}`;
+    const params = {
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: `posts/${fileName}`,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype,
+    };
+
+    await s3.send(new PutObjectCommand(params));
+    const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/posts/${fileName}`;
     res.json({ imageUrl });
   } catch (error) {
     console.error('Error uploading image:', error.stack);

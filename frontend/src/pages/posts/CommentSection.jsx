@@ -63,7 +63,7 @@ function CommentSection({ postId, isOwnPost, onDeleteComment }) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <img
-                    src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${comment.author.avatar}`}
+                    src={comment.author.avatar || "/default-avatar.png"}
                     alt="avatar"
                     className="h-6 w-6 rounded-full mr-2 object-cover"
                   />

@@ -156,7 +156,7 @@ function Post({
         <div className="flex items-center justify-between mb-4">
           <Link to={`/user/${post.author.username}`} className="flex items-center">
             <img
-              src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${post.author.avatar}`}
+              src={post.author.avatar || "/default-avatar.png"}
               alt="avatar"
               className="h-10 w-10 rounded-full mr-3 object-cover"
             />
@@ -242,7 +242,7 @@ function Post({
         {post.image && (
           <div className="mb-4">
             <img
-              src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${post.image}`}
+              src={post.image || "/default-image.png"}
               alt="Post image"
               className="rounded-lg border border-theme object-cover w-full"
             />

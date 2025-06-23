@@ -8,16 +8,12 @@ const Report = require('../models/Report');
 const Category = require('../models/Category');
 const AdminAction = require('../models/AdminAction');
 const { authMiddleware } = require('../middleware/authMiddleware');
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const router = express.Router();
 const mongoose = require('mongoose');
 
 // Configure multer for avatar uploads
-const storage = multer.diskStorage({
-  destination: './uploads/avatars/',
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  },
-});
+const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
@@ -40,9 +36,9 @@ router.put('/profile', authMiddleware, upload.single('avatar'), async (req, res)
       return res.status(400).json({ message: 'Name and username are required' });
     }
 
-    const existingUser = await User.findOne({ 
-      username, 
-      _id: { $ne: req.user._id } 
+    const existingUser = await User.findOne({
+      username,
+      _id: { $ne: req.user._id }
     });
     if (existingUser) {
       return res.status(400).json({ message: 'Username already taken' });
@@ -55,7 +51,34 @@ router.put('/profile', authMiddleware, upload.single('avatar'), async (req, res)
     };
 
     if (req.file) {
-      updateData.avatar = `/uploads/avatars/${req.file.filename}`;
+      if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_REGION || !process.env.S3_BUCKET_NAME) {
+        console.error('Missing AWS environment variables:', {
+          AWS_REGION: process.env.AWS_REGION,
+          AWS_ACCESS_KEY_ID: !!process.env.AWS_ACCESS_KEY_ID,
+          AWS_SECRET_ACCESS_KEY: !!process.env.AWS_SECRET_ACCESS_KEY,
+          S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
+        });
+        return res.status(500).json({ message: 'AWS configuration incomplete' });
+      }
+
+      const s3 = new S3Client({
+        region: process.env.AWS_REGION,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        },
+      });
+
+      const fileName = `${Date.now()}-${req.file.originalname}`;
+      const params = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `avatars/${fileName}`,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      };
+
+      await s3.send(new PutObjectCommand(params));
+      updateData.avatar = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/avatars/${fileName}`;
     }
 
     const user = await User.findByIdAndUpdate(req.user._id, updateData, {
@@ -98,10 +121,10 @@ router.get('/:username', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'You have blocked this user' });
     }
 
-    const posts = await Post.find({ 
-      author: user._id, 
-      isDeleted: false, 
-      isArchived: false 
+    const posts = await Post.find({
+      author: user._id,
+      isDeleted: false,
+      isArchived: false
     })
       .populate('author', 'name username avatar')
       .sort({ createdAt: -1 });

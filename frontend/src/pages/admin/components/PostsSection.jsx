@@ -126,7 +126,7 @@ export default function PostsSection({ posts, onActionClick }) {
                   >
                     <img
                       className="h-8 w-8 rounded-full mr-2 object-cover"
-                      src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${post.author.avatar}`}
+                      src={post.author.avatar || "/default-avatar.png"}
                       alt={post.author.username}
                     />
                     {post.author.username}

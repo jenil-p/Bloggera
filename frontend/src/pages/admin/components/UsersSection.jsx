@@ -107,7 +107,7 @@ export default function UsersSection({ users, onActionClick, currentUserId }) {
             >
               <img
                 className="h-8 w-8 rounded-full mr-2 object-cover"
-                src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${user.avatar}`}
+                src={user.avatar || "/default-avatar.png"}
                 alt={user.username}
               />
               {user.username}

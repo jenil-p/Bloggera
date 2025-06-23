@@ -118,7 +118,7 @@ function Search() {
                     className="flex items-center p-2 bg-card rounded-lg shadow-md hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     <img
-                      src={`${import.meta.env.VITE_UPLOADS_URL || 'http://localhost:3000'}${user.avatar}`}
+                      src={user.avatar || "/default-avatar.png"}
                       alt={user.username}
                       className="h-10 w-10 rounded-full mr-2 object-cover"
                     />
