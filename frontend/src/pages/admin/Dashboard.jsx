@@ -108,26 +108,16 @@ function Dashboard() {
           }));
           alert(`${deleteAllPosts ? 'All' : postIds.length} post(s) deleted successfully`);
           break;
-        case 'block_user':
-          await api.post(`/admin/block/${target}`, { reason });
-          setData(prev => ({
-            ...prev,
-            users: prev.users.map(user =>
-              user._id === target ? { ...user, isBlocked: true } : user // Assuming backend updates blockedUsers
-            ),
-          }));
-          alert('User blocked successfully');
-          break;
         case 'suspend_user':
           await api.post(`/admin/suspend/${target}`, { reason, durationDays });
           setData(prev => ({
             ...prev,
             users: prev.users.map(user =>
               user._id === target ? {
-                _id: user._id,
+                ...user,
                 isSuspended: true,
                 suspendedUntil: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000),
-              } : userId
+              } : user
             ),
             stats: {
               ...prev.stats,
@@ -143,10 +133,10 @@ function Dashboard() {
             ...prev,
             users: prev.users.map(user =>
               user._id === target ? {
-                _id: user._id,
+                ...user,
                 isSuspended: false,
                 suspendedUntil: null,
-              } : userId
+              } : user
             ),
             stats: {
               ...prev.stats,
@@ -322,6 +312,7 @@ function Dashboard() {
       }
       setShowActionModal(null);
     } catch (err) {
+      console.log(err);
       setError(err.response?.data?.message || `Error performing ${type}`);
       alert(err.response?.data?.message || `Error performing ${type}`);
     }

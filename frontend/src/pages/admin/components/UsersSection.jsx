@@ -1,26 +1,25 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MdDelete } from "react-icons/md";
-import { BiSelectMultiple } from "react-icons/bi";
-import { FiX } from "react-icons/fi";
 import { MdOutlineDelete } from "react-icons/md";
+import { BiSelectMultiple } from "react-icons/bi";
+import { FiX, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { MdDelete } from "react-icons/md";
+import { FaUserAltSlash, FaUserCheck } from "react-icons/fa";
 
 export default function UsersSection({ users, onActionClick, currentUserId }) {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [expanded, setExpanded] = useState({});
 
   const handleSelectUser = (userId) => {
     setSelectedUsers(prev =>
-      prev.includes(userId) ? prev.filter(id => id !== id) : [...prev, userId]
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
     );
   };
 
   const handleSelectAll = () => {
-    if (selectedUsers.length === users.filter(u => u._id !== currentUserId).length) {
-      setSelectedUsers([]);
-    } else {
-      setSelectedUsers(users.filter(u => u._id !== currentUserId).map(u => u._id));
-    }
+    const eligibleUsers = users.filter(u => u._id !== currentUserId).map(u => u._id);
+    setSelectedUsers(selectedUsers.length === eligibleUsers.length ? [] : eligibleUsers);
   };
 
   const handleDeleteSelected = () => {
@@ -39,106 +38,128 @@ export default function UsersSection({ users, onActionClick, currentUserId }) {
 
   const toggleSelectionMode = () => {
     setIsSelectionMode(prev => !prev);
-    setSelectedUsers([]); // Clear selections when toggling
+    setSelectedUsers([]);
+  };
+
+  const toggleExpanded = (id) => {
+    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   return (
     <div className="divide-y divide-gray-200">
+      {/* Header */}
       <div className="flex justify-between items-center p-6 bg-card rounded-t-lg shadow-sm">
-        <div className="flex items-center">
-          <h2 className="text-lg font-semibold text-theme">Users</h2>
-        </div>
+        <h2 className="text-lg font-semibold text-theme">Users</h2>
         <div className="flex items-center space-x-4">
           {!isSelectionMode ? (
             <button
               onClick={toggleSelectionMode}
-              className="px-4 py-2 cursor-pointer text-blue-500 hover:underline"
+              className="px-4 py-2 text-blue-500 hover:underline"
             >
               Select
             </button>
           ) : (
             <>
-              <button
-                onClick={handleSelectAll}
-                className="px-1 py-2 cursor-pointer"
-              >
-                <BiSelectMultiple />
-
-              </button>
-              <button
-                onClick={toggleSelectionMode}
-                className="px-1 py-2 cursor-pointer"
-              >
-                <FiX />
-              </button>
+              <button onClick={handleSelectAll}><BiSelectMultiple /></button>
+              <button onClick={toggleSelectionMode}><FiX /></button>
               {selectedUsers.length > 0 && (
                 <button
                   onClick={handleDeleteSelected}
-                  className="px-1 py-2 flex justify-center items-center text-red-600 cursor-pointer"
+                  className="text-red-600 flex items-center"
                 >
                   <MdOutlineDelete className='w-5 h-5' /> ({selectedUsers.length})
                 </button>
               )}
-              <button
-                onClick={handleDeleteAll}
-                className="px-1 py-2 text-red-600 cursor-pointer "
-              >
-                Delete All
-              </button>
+              <button onClick={handleDeleteAll} className="text-red-600">Delete All</button>
             </>
           )}
         </div>
       </div>
+
+      {/* USERS - Responsive */}
       {users.map(user => (
-        <div key={user._id} className="p-6 flex justify-between items-center transition-colors duration-150">
-          <div className="flex items-center">
-            {isSelectionMode && (
-              <input
-                type="checkbox"
-                checked={selectedUsers.includes(user._id)}
-                onChange={() => handleSelectUser(user._id)}
-                disabled={user._id === currentUserId}
-                className="mr-4 h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-              />
+        <div key={user._id} className="border rounded-lg my-2">
+          {/* Mobile View */}
+          <div className="sm:hidden p-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center">
+                {isSelectionMode && (
+                  <input
+                    type="checkbox"
+                    checked={selectedUsers.includes(user._id)}
+                    onChange={() => handleSelectUser(user._id)}
+                    disabled={user._id === currentUserId}
+                    className="mr-2"
+                  />
+                )}
+                <img src={user.avatar || '/default-avatar.png'} className="w-8 h-8 rounded-full mr-2" alt={user.username} />
+                <Link to={`/user/${user.username}`} className="text-theme font-medium hover:underline">{user.username}</Link>
+              </div>
+              <button onClick={() => toggleExpanded(user._id)}>
+                {expanded[user._id] ? <FiChevronUp /> : <FiChevronDown />}
+              </button>
+            </div>
+            {expanded[user._id] && (
+              <div className="mt-2 space-y-1 text-sm text-gray-700">
+                <p><strong>Joined:</strong> {new Date(user.createdAt).toLocaleString()}</p>
+                {user._id !== currentUserId && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => onActionClick({ type: user.isSuspended ? 'unsuspend_user' : 'suspend_user', targetId: user._id })}
+                      className="px-2 py-1 flex justify-center items-center text-xs rounded bg-yellow-100 text-yellow-800"
+                    >
+                      {user.isSuspended && <><FaUserCheck className='h-4 w-4' /> Unsuspend</>}
+                      {!user.isSuspended && <><FaUserAltSlash className='h-4 w-4' /> Suspend</>}
+                    </button>
+                    <button
+                      onClick={() => onActionClick({ type: 'delete_user', targetId: user._id })}
+                      className="px-2 py-1 flex justify-center items-center text-xs rounded bg-red-100 text-red-800"
+                    >
+                      <MdDelete className='h-4 w-4' /> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
-            <Link
-              to={`/user/${user.username}`}
-              className="flex items-center text-sm font-medium text-theme hover:underline"
-            >
-              <img
-                className="h-8 w-8 rounded-full mr-2 object-cover"
-                src={user.avatar || "/default-avatar.png"}
-                alt={user.username}
-              />
-              {user.username}
-            </Link>
-            <span className="ml-4 text-xs text-gray-500">
-              {new Date(user.createdAt).toLocaleString()}
-            </span>
           </div>
-          <div className="space-x-2">
-            {user._id !== currentUserId && (
-              <>
-                <button
-                  onClick={() => onActionClick({ type: user.isSuspended ? 'unsuspend_user' : 'suspend_user', targetId: user._id })}
-                  className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300 text-sm font-medium px-3 py-1 rounded hover:bg-yellow-100 dark:hover:bg-yellow-900/20 transition-colors duration-150"
-                >
-                  {user.isSuspended ? 'Unsuspend' : 'Suspend'}
-                </button>
-                <button
-                  onClick={() => onActionClick({ type: 'block_user', targetId: user._id })}
-                  className="text-orange-600 dark:text-orange-400 hover:text-orange-900 dark:hover:text-orange-300 text-sm font-medium px-3 py-1 rounded hover:bg-orange-100 dark:hover:bg-orange-900/20 transition-colors duration-150"
-                >
-                  Block
-                </button>
-                <button
-                  onClick={() => onActionClick({ type: 'delete_user', targetId: user._id })}
-                  className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 text-sm font-medium px-3 py-1 rounded hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors duration-150"
-                >
-                  Delete
-                </button>
-              </>
-            )}
+
+          {/* Desktop View */}
+          <div className="hidden sm:flex justify-between items-center p-4 hover:bg-gray-50 transition">
+            <div className="flex items-center">
+              {isSelectionMode && (
+                <input
+                  type="checkbox"
+                  checked={selectedUsers.includes(user._id)}
+                  onChange={() => handleSelectUser(user._id)}
+                  disabled={user._id === currentUserId}
+                  className="mr-4 h-5 w-5"
+                />
+              )}
+              <img src={user.avatar || '/default-avatar.png'} className="w-8 h-8 rounded-full mr-2" alt={user.username} />
+              <Link to={`/user/${user.username}`} className="text-sm font-medium text-theme hover:underline">
+                {user.username}
+              </Link>
+              <span className="ml-4 text-xs text-gray-500">{new Date(user.createdAt).toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {user._id !== currentUserId && (
+                <>
+                  <button
+                    onClick={() => onActionClick({ type: user.isSuspended ? 'unsuspend_user' : 'suspend_user', targetId: user._id })}
+                    className={`${user.isSuspended ? 'text-green-600 hover:text-green-900 hover:bg-green-100' : 'text-red-600 hover:text-red-900 hover:bg-red-100'} text-sm px-3 py-1 flex justify-center items-center gap-1 rounded transition`}
+                  >
+                    {user.isSuspended && <><FaUserCheck className='h-4 w-4' /> Unsuspend</>}
+                    {!user.isSuspended && <><FaUserAltSlash className='h-4 w-4' /> Suspend</>}
+                  </button>
+                  <button
+                    onClick={() => onActionClick({ type: 'delete_user', targetId: user._id })}
+                    className="text-red-600 hover:text-red-900 text-sm px-3 py-1 flex justify-center items-center gap-1 rounded hover:bg-red-100 transition"
+                  >
+                    <MdDelete className='h-4 w-4' /> Delete
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       ))}

@@ -93,13 +93,13 @@ export default function PostsSection({ posts, onActionClick }) {
           <div className="flex space-x-2">
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg ${viewMode === 'list' ? 'text-black' : 'text-gray-500'}`}
+              className={`p-2 rounded-lg ${viewMode === 'list' ? 'text-theme bg-[#ffffff33]' : 'text-gray-500'}`}
             >
               <MdFormatListBulleted className="h-5 w-5" />
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg ${viewMode === 'grid' ? 'text-black' : 'text-gray-500'}`}
+              className={`p-2 rounded-lg ${viewMode === 'grid' ? 'text-theme bg-[#ffffff33]' : 'text-gray-500'}`}
             >
               <MdFeaturedPlayList className="h-5 w-5" />
             </button>
