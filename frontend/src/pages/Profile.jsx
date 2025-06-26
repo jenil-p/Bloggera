@@ -253,13 +253,13 @@ function Profile() {
           <div className="flex space-x-2">
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded ${viewMode === 'list' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              className={`p-2 rounded ${viewMode === 'list' ? 'text-theme bg-[#ffffff33]' : 'text-gray-500'}`}
             >
               <MdFormatListBulleted className="h-5 w-5" />
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded ${viewMode === 'grid' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              className={`p-2 rounded ${viewMode === 'grid' ? 'text-theme bg-[#ffffff33]' : 'text-gray-500'}`}
             >
               <MdFeaturedPlayList className="h-5 w-5" />
             </button>

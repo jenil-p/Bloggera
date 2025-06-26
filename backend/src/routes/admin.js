@@ -50,6 +50,7 @@ router.delete('/posts/:id', adminMiddleware, async (req, res) => {
   }
 });
 
+// Delete all post
 router.delete('/posts', adminMiddleware, async (req, res) => {
   try {
     const { postIds, reason, deleteAll } = req.body;
@@ -89,40 +90,6 @@ router.delete('/posts', adminMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Error deleting posts:', error.stack);
     res.status(500).json({ message: 'Error deleting posts', error: error.message });
-  }
-});
-
-// Block a user
-router.post('/block/:userId', adminMiddleware, async (req, res) => {
-  try {
-    const { reason } = req.body;
-    const user = await User.findById(req.params.userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    if (user.isAdmin) {
-      return res.status(400).json({ message: 'Cannot block an admin' });
-    }
-
-    if (!reason) {
-      return res.status(400).json({ message: 'Reason is required' });
-    }
-
-    await User.findByIdAndUpdate(req.user._id, {
-      $addToSet: { blockedUsers: user._id },
-    });
-
-    await AdminAction.create({
-      admin: req.user._id,
-      actionType: 'block_user',
-      targetUser: user._id,
-      reason,
-    });
-
-    res.json({ message: 'User blocked successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error blocking user', error: error.message });
   }
 });
 

@@ -91,7 +91,7 @@ function Signup({ onSuccess, onSwitchToLogin }) {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-[var(--border-color)] bg-card text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--gradient-to)] focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 rounded-lg border border-[var(--border-color)] bg-card placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--gradient-to)] focus:border-transparent transition-all"
                   placeholder="John Doe"
                   required
                 />

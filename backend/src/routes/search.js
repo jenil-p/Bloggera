@@ -13,11 +13,13 @@ router.get('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Query is required' });
     }
 
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id).select('blockedUsers savedPosts');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     const blockedUsers = user.blockedUsers || [];
+    // Get users who have blocked the current user
+    const blockedByUsers = await User.find({ blockedBy: req.user._id }).distinct('_id');
 
     // Validate category if provided
     if (category && !mongoose.isValidObjectId(category)) {
@@ -31,7 +33,7 @@ router.get('/', authMiddleware, async (req, res) => {
         { name: { $regex: q, $options: 'i' } },
       ],
       isSuspended: false,
-      _id: { $nin: blockedUsers },
+      _id: { $nin: [...blockedUsers, ...blockedByUsers] }, // Exclude both blocked and blocking users
     }).select('name username avatar bio').limit(10);
 
     // Build post query
@@ -42,7 +44,7 @@ router.get('/', authMiddleware, async (req, res) => {
       ],
       isDeleted: false,
       isArchived: false,
-      author: { $nin: blockedUsers },
+      author: { $nin: [...blockedUsers, ...blockedByUsers] }, // Exclude both blocked and blocking users
     };
     if (category) {
       postQuery.categories = category;
@@ -54,7 +56,7 @@ router.get('/', authMiddleware, async (req, res) => {
       .populate({
         path: 'categories',
         select: 'name',
-        match: { _id: { $exists: true } }, // Ensure valid categories
+        match: { _id: { $exists: true } },
       })
       .sort({ createdAt: -1 })
       .limit(20);
@@ -64,7 +66,7 @@ router.get('/', authMiddleware, async (req, res) => {
       tags: { $regex: q, $options: 'i' },
       isDeleted: false,
       isArchived: false,
-      author: { $nin: blockedUsers },
+      author: { $nin: [...blockedUsers, ...blockedByUsers] }, // Exclude both blocked and blocking users
     };
     if (category) {
       tagQuery.categories = category;

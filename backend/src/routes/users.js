@@ -83,7 +83,7 @@ router.put('/profile', authMiddleware, upload.single('avatar'), async (req, res)
 
     const user = await User.findByIdAndUpdate(req.user._id, updateData, {
       new: true,
-      select: 'name username avatar bio isAdmin isSuspended blockedUsers likedPosts commentedPosts savedPosts suspendedUntil',
+      select: 'name username avatar bio isAdmin isSuspended blockedUsers blockedBy likedPosts commentedPosts savedPosts suspendedUntil',
     });
 
     res.json(user);
@@ -102,7 +102,7 @@ router.get('/:username', authMiddleware, async (req, res) => {
     }
 
     const user = await User.findOne({ username: req.params.username })
-      .select('name username avatar bio');
+      .select('name username avatar bio blockedBy');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -117,8 +117,14 @@ router.get('/:username', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'Current user not found' });
     }
 
+    // Check if current user has blocked the target user
     if (currentUser.blockedUsers.some(id => id.toString() === user._id.toString())) {
-      return res.status(403).json({ message: 'You have blocked this user' });
+      return res.status(403).json({ message: 'You have blocked this user', isBlockedByCurrentUser: true });
+    }
+
+    // Check if target user has blocked the current user
+    if (user.blockedBy.some(id => id.toString() === req.user._id.toString())) {
+      return res.status(403).json({ message: 'You are blocked by this user' });
     }
 
     const posts = await Post.find({
@@ -157,18 +163,76 @@ router.post('/block/:userId', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (targetUser._id.toString() === req.user._id.toString()) {
-      return res.status(400).json({ message: 'Cannot block yourself' });
+    // Start a transaction to ensure data consistency
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Add target user to current user's blockedUsers
+      await User.findByIdAndUpdate(req.user._id, {
+        $addToSet: { blockedUsers: targetUser._id },
+      }, { session });
+
+      // Add current user to target user's blockedBy
+      await User.findByIdAndUpdate(targetUser._id, {
+        $addToSet: { blockedBy: req.user._id },
+      }, { session });
+
+      // Commit the transaction
+      await session.commitTransaction();
+      session.endSession();
+
+      res.json({ message: 'User blocked successfully' });
+    } catch (error) {
+      // Rollback transaction on error
+      await session.abortTransaction();
+      session.endSession();
+      throw error;
     }
-
-    await User.findByIdAndUpdate(req.user._id, {
-      $addToSet: { blockedUsers: targetUser._id },
-    });
-
-    res.json({ message: 'User blocked successfully' });
   } catch (error) {
     console.error('Error blocking user:', error.stack);
     res.status(500).json({ message: 'Error blocking user', error: error.message });
+  }
+});
+
+// Unblock user
+router.post('/unblock/:userId', authMiddleware, async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
+    const targetUser = await User.findById(req.params.userId);
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      await User.findByIdAndUpdate(req.user._id, {
+        $pull: { blockedUsers: targetUser._id },
+      }, { session });
+
+      await User.findByIdAndUpdate(targetUser._id, {
+        $pull: { blockedBy: req.user._id },
+      }, { session });
+
+      // Commit the transaction
+      await session.commitTransaction();
+      session.endSession();
+
+      res.json({ message: 'User unblocked successfully' });
+    } catch (error) {
+      // Rollback transaction on error
+      await session.abortTransaction();
+      session.endSession();
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error unblocking user:', error.stack);
+    res.status(500).json({ message: 'Error unblocking user', error: error.message });
   }
 });
 
@@ -212,14 +276,22 @@ router.delete('/delete/:userId', authMiddleware, async (req, res) => {
       // Remove user's category suggestions
       await Category.deleteMany({ suggestedBy: targetUser._id }).session(session);
 
-      // Remove user from other users' arrays (likes, savedPosts, blockedUsers)
+      // Remove user from other users' arrays (likes, savedPosts, blockedUsers, blockedBy)
       await User.updateMany(
-        { $or: [{ likedPosts: { $in: postIds } }, { savedPosts: { $in: postIds } }, { blockedUsers: targetUser._id }] },
+        {
+          $or: [
+            { likedPosts: { $in: postIds } },
+            { savedPosts: { $in: postIds } },
+            { blockedUsers: targetUser._id },
+            { blockedBy: targetUser._id },
+          ],
+        },
         {
           $pull: {
             likedPosts: { $in: postIds },
             savedPosts: { $in: postIds },
             blockedUsers: targetUser._id,
+            blockedBy: targetUser._id,
           },
         }
       ).session(session);
@@ -264,6 +336,7 @@ router.delete('/delete/:userId', authMiddleware, async (req, res) => {
   }
 });
 
+// Delete users (Admin only)
 router.delete('/delete', authMiddleware, async (req, res) => {
   try {
     if (!req.user.isAdmin) {
@@ -301,12 +374,31 @@ router.delete('/delete', authMiddleware, async (req, res) => {
       await Report.deleteMany({ reportedBy: targetUser._id });
       await Category.deleteMany({ suggestedBy: targetUser._id });
       await User.updateMany(
-        { $or: [{ likedPosts: { $in: postIds } }, { savedPosts: { $in: postIds } }, { blockedUsers: targetUser._id }] },
-        { $pull: { likedPosts: { $in: postIds }, savedPosts: { $in: postIds }, blockedUsers: targetUser._id } }
+        {
+          $or: [
+            { likedPosts: { $in: postIds } },
+            { savedPosts: { $in: postIds } },
+            { blockedUsers: targetUser._id },
+            { blockedBy: targetUser._id },
+          ],
+        },
+        {
+          $pull: {
+            likedPosts: { $in: postIds },
+            savedPosts: { $in: postIds },
+            blockedUsers: targetUser._id,
+            blockedBy: targetUser._id,
+          },
+        }
       );
       await Post.updateMany(
         { $or: [{ likes: targetUser._id }, { savedBy: targetUser._id }] },
-        { $pull: { likes: targetUser._id, savedBy: targetUser._id } }
+        {
+          $pull: {
+            likes: targetUser._id,
+            savedBy: targetUser._id,
+          },
+        }
       );
       await User.deleteOne({ _id: targetUser._id });
       adminActions.push({

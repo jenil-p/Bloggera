@@ -32,7 +32,7 @@ function App() {
                 <Route path="/home" element={<Home />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/search" element={<Search />} />
-                <Route path="/posts" element={<Posts />} /> {/* Add Posts route */}
+                <Route path="/posts" element={<Posts />} />
                 <Route path="/user/:username" element={<UserProfile />} />
                 <Route path="/post/:id" element={<PostDetail />} />
               </Route>

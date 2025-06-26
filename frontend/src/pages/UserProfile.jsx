@@ -5,7 +5,7 @@ import PostCard from './posts/PostCard';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
-import { MdFormatListBulleted, MdFeaturedPlayList, MdCameraAlt } from "react-icons/md";
+import { MdFormatListBulleted, MdFeaturedPlayList } from "react-icons/md";
 
 function UserProfile() {
   const { username } = useParams();
@@ -13,6 +13,7 @@ function UserProfile() {
   const [user, setUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [isBlockedByCurrentUser, setIsBlockedByCurrentUser] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('list'); // 'list' for Post, 'grid' for PostCard
@@ -25,8 +26,14 @@ function UserProfile() {
         setPosts(response.data.posts);
         setLoading(false);
       } catch (err) {
-        if (err.response?.status === 403 && err.response?.data?.message === 'You have blocked this user') {
-          setIsBlocked(true);
+        if (err.response?.status === 403) {
+          if (err.response?.data?.message === 'You have blocked this user') {
+            setIsBlocked(true);
+            setIsBlockedByCurrentUser(true);
+          } else if (err.response?.data?.message === 'You are blocked by this user') {
+            setIsBlocked(true);
+            setIsBlockedByCurrentUser(false);
+          }
         } else {
           setError(err.response?.data?.message || 'Error fetching user data');
         }
@@ -73,9 +80,24 @@ function UserProfile() {
     try {
       await api.post(`/users/block/${user._id}`);
       setIsBlocked(true);
+      setIsBlockedByCurrentUser(true);
       alert(`User ${username} blocked`);
     } catch (err) {
       setError(err.response?.data?.message || 'Error blocking user');
+    }
+  };
+
+  const handleUnblock = async () => {
+    try {
+      await api.post(`/users/unblock/${user._id}`);
+      setIsBlocked(false);
+      setIsBlockedByCurrentUser(false);
+      const response = await api.get(`/users/${username}`);
+      setUser(response.data.user);
+      setPosts(response.data.posts);
+      alert(`User ${username} unblocked`);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error unblocking user');
     }
   };
 
@@ -86,7 +108,19 @@ function UserProfile() {
   if (isBlocked) {
     return (
       <div className="max-w-4xl mx-auto p-4">
-        <p className="text-center text-theme">You have blocked this user.</p>
+        <p className="text-center text-theme">
+          {isBlockedByCurrentUser ? 'You have blocked this user.' : 'You are blocked by this user.'}
+        </p>
+        {isBlockedByCurrentUser && (
+          <div className="text-center mt-4">
+            <button
+              onClick={handleUnblock}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Unblock User
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -127,13 +161,13 @@ function UserProfile() {
         <div className="flex space-x-2">
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 rounded ${viewMode === 'list' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`p-2 rounded ${viewMode === 'list' ? 'text-theme bg-[#ffffff33]' : 'text-gray-500'}`}
           >
             <MdFormatListBulleted className="h-5 w-5" />
           </button>
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-2 rounded ${viewMode === 'grid' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`p-2 rounded ${viewMode === 'grid' ? 'text-theme bg-[#ffffff33]' : 'text-gray-500'}`}
           >
             <MdFeaturedPlayList className="h-5 w-5" />
           </button>
