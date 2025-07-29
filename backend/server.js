@@ -7,6 +7,7 @@ const usersRoutes = require('./src/routes/users');
 const adminRoutes = require('./src/routes/admin');
 const categoryRoutes = require('./src/routes/category');
 const searchRoutes = require('./src/routes/search');
+const multer = require('multer');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
