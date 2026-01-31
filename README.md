@@ -1,4 +1,4 @@
-Bloggera 📝
+# Bloggera 📝
 
 Bloggera is a full-stack blogging and social posting web application that allows users to create, publish, and interact with blog posts. It provides authentication, public feed access, and social interactions like likes and comments with a clean and responsive UI.
 
