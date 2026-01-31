@@ -20,10 +20,12 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
+
 // Middleware
+const allowedOrigins = process.env.FRONTEND_URLS.split(",");
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://bloggerra.netlify.app"],
+    origin: allowedOrigins,
     credentials: true,
   })
 );
