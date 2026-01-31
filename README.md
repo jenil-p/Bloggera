@@ -60,7 +60,7 @@ cd backend
 npm install
 npm run dev
 ```
-The Backend server will start on: http://localhost:5000 (or your configured port).
+The Backend server will start on: http://localhost3000 (or your configured port).
 
 ## Frontend Setup
 Open a new terminal tab/window and navigate to the frontend folder:
